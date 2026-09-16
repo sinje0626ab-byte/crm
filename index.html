@@ -3212,10 +3212,7 @@ body.light-mode .settings-panel { background:linear-gradient(145deg,#f0fdf4,#eff
       </div>
     </div>
     <div style="margin-top:16px;">
-      <div class="qa-row">
-        <div class="qa-field"><label>이름 *</label><input type="text" id="qa-name" placeholder="홍길동"></div>
-        <div class="qa-field"><label>연락처</label><input type="text" id="qa-phone" placeholder="010-0000-0000"></div>
-      </div>
+      <div class="qa-field"><label>이름 *</label><input type="text" id="qa-name" placeholder="홍길동"></div>
       <div class="qa-row">
         <div class="qa-field"><label>지역</label>
           <div style="display:flex;gap:6px;">
@@ -4099,7 +4096,7 @@ function deleteTblFromEdit() {
 }
 
 function openQuickAdd() {
-  ['qa-name','qa-phone','qa-region','qa-memo'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  ['qa-name','qa-region','qa-memo'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
   ['qa-personality','qa-route','qa-sido'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
   const qsg = document.getElementById('qa-sigungu'); if(qsg) qsg.innerHTML='<option value="">시·군·구</option>';
   document.getElementById('qa-status').value = '0';
@@ -4122,7 +4119,7 @@ function saveQuickAdd() {
     id: uid(),
     tblOnly: true,  // ★ 테이블형 전용 — 카드형/그룹뷰에 안 뜸
     name: name,
-    phone: document.getElementById('qa-phone').value.trim(),
+    phone: '',  // 간편등록에서는 연락처를 받지 않음 — 표에는 표시되고, ✎ 수정에서 입력
     region: document.getElementById('qa-region').value.trim(),
     personality: document.getElementById('qa-personality').value,
     applyRoute: document.getElementById('qa-route').value,
