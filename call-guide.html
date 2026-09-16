@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>바른비즈 콜 가이드</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMiIgeTE9IjMiIHgyPSIyMiIgeTI9IjIxIiBncmFkaWVudFVuaXRzPSJ1c2VyU3BhY2VPblVzZSI+PHN0b3Agb2Zmc2V0PSIwIiBzdG9wLWNvbG9yPSIjMkU3REY2Ii8+PHN0b3Agb2Zmc2V0PSIxIiBzdG9wLWNvbG9yPSIjMTZCMzY0Ii8+PC9saW5lYXJHcmFkaWVudD48L2RlZnM+PHBhdGggZmlsbD0idXJsKCNnKSIgZD0iTTIwIDE1LjVjLTEuMjUgMC0yLjQ1LS4yLTMuNTctLjU3LS4zNS0uMTEtLjc0LS4wMy0xLjAyLjI0bC0yLjIgMi4yYy0yLjgzLTEuNDQtNS4xNS0zLjc1LTYuNTktNi41OWwyLjItMi4yMWMuMjgtLjI2LjM2LS42NS4yNS0xQzguNyA2LjQ1IDguNSA1LjI1IDguNSA0YzAtLjU1LS40NS0xLTEtMUg0Yy0uNTUgMC0xIC40NS0xIDEgMCA5LjM5IDcuNjEgMTcgMTcgMTcgLjU1IDAgMS0uNDUgMS0xdi0zLjVjMC0uNTUtLjQ1LTEtMS0xeiIvPjwvc3ZnPgo=">
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root{
+    --paper:#F1EFE8;
+    --card:#FBFAF6;
+    --card-2:#F6F4ED;
+    --ink:#1B2A28;
+    --ink-soft:#5A6564;
+    --ink-faint:#8A928F;
+    --line:#E3DFD3;
+    --line-soft:#EEEAE0;
+    --accent:#14735F;
+    --accent-deep:#0C4A3D;
+    --accent-wash:#E4EFE9;
+    --alert:#BE5330;
+    --alert-wash:#F6E7DE;
+    --mark:#F7E38C;
+    --shadow:0 1px 2px rgba(27,42,40,.06),0 8px 24px rgba(27,42,40,.07);
+    --mono:"SFMono-Regular",ui-monospace,"JetBrains Mono","Menlo",monospace;
+    --sans:"Pretendard","Pretendard Variable",-apple-system,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    font-family:var(--sans);
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.6;
+    letter-spacing:-.01em;
+    -webkit-font-smoothing:antialiased;
+    padding-bottom:96px;
+    font-size:17px;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    position:sticky;top:0;z-index:40;
+    background:rgba(241,239,232,.86);
+    backdrop-filter:saturate(1.4) blur(10px);
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-inner{
+    max-width:820px;margin:0 auto;
+    padding:12px 20px 0;
+  }
+  .brand-row{display:flex;align-items:center;gap:10px;justify-content:space-between}
+  .brand{display:flex;align-items:baseline;gap:9px}
+  .brand .logo{
+    font-weight:800;font-size:19px;letter-spacing:-.02em;color:var(--accent-deep);
+  }
+  .brand .sub{font-size:13px;color:var(--ink-faint);font-weight:500}
+  .reset-btn{
+    font-family:var(--sans);font-size:13.5px;font-weight:600;
+    color:var(--ink-soft);background:transparent;
+    border:1px solid var(--line);border-radius:999px;
+    padding:7px 14px;cursor:pointer;transition:.15s;
+    display:inline-flex;align-items:center;gap:5px;
+  }
+  .reset-btn:hover{border-color:var(--accent);color:var(--accent)}
+  .reset-btn:active{transform:scale(.97)}
+
+  .edit-btn{
+    font-family:var(--sans);font-size:13.5px;font-weight:700;
+    color:var(--accent-deep);background:var(--accent-wash);
+    border:1px solid transparent;border-radius:999px;
+    padding:7px 14px;cursor:pointer;transition:.15s;
+    display:inline-flex;align-items:center;gap:6px;
+  }
+  .edit-btn:hover{filter:brightness(.97)}
+  .edit-btn:active{transform:scale(.97)}
+  .edit-btn.active{background:var(--alert);color:#fff}
+  .edit-btn svg{width:13px;height:13px;flex-shrink:0}
+
+  .save-flash{
+    font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent);
+    opacity:0;transition:opacity .25s;display:inline-flex;align-items:center;gap:4px;
+  }
+  .save-flash.show{opacity:1}
+  .save-flash svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+
+  .btn-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+
+  /* editable text visual affordance */
+  body.edit-mode .edit-text{
+    border-radius:6px;outline:1.5px dashed var(--line);outline-offset:3px;
+    background:rgba(20,115,95,.04);cursor:text;transition:.15s;
+  }
+  body.edit-mode .edit-text:hover{outline-color:var(--accent);background:var(--accent-wash)}
+  .edit-text:focus{
+    outline:2px solid var(--accent)!important;background:#fff!important;
+    outline-offset:3px;box-shadow:0 0 0 4px var(--accent-wash);
+  }
+  body.edit-mode .say .copy{display:none}
+
+  .tabs{display:flex;gap:4px;margin-top:12px}
+  .tab{
+    flex:1;position:relative;
+    font-family:var(--sans);font-size:16px;font-weight:700;
+    color:var(--ink-faint);background:transparent;border:none;
+    padding:12px 8px 14px;cursor:pointer;
+    border-bottom:2.5px solid transparent;transition:.15s;letter-spacing:-.02em;
+    display:flex;flex-direction:column;align-items:center;gap:2px;
+  }
+  .tab .tab-en{font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.06em;opacity:.7}
+  .tab:hover{color:var(--ink-soft)}
+  .tab.active{color:var(--accent-deep);border-bottom-color:var(--accent)}
+
+  /* progress */
+  .progress-wrap{max-width:820px;margin:0 auto;padding:0 20px}
+  .progress{
+    height:3px;background:var(--line-soft);border-radius:99px;overflow:hidden;margin:10px 0 0;
+  }
+  .progress-bar{height:100%;width:0;background:var(--accent);border-radius:99px;transition:width .35s cubic-bezier(.4,0,.2,1)}
+  .progress-label{
+    font-family:var(--mono);font-size:11.5px;color:var(--ink-faint);
+    text-align:right;margin:5px 0 12px;letter-spacing:.03em;
+  }
+
+  /* ---------- main ---------- */
+  main{max-width:820px;margin:0 auto;padding:20px 20px 40px}
+  .panel{display:none}
+  .panel.active{display:block;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  .call-head{margin:2px 0 20px}
+  .call-head h1{font-size:24px;font-weight:800;letter-spacing:-.03em}
+  .call-head p{font-size:14.5px;color:var(--ink-soft);margin-top:5px}
+
+  /* step card */
+  .step{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    margin-bottom:14px;overflow:hidden;
+    transition:opacity .25s,border-color .2s;
+  }
+  .step.done{opacity:.5}
+  .step.done:hover{opacity:.85}
+  .step-head{
+    display:flex;align-items:flex-start;gap:13px;
+    padding:16px 17px;cursor:pointer;user-select:none;
+  }
+  .step-num{
+    flex-shrink:0;font-family:var(--mono);font-size:13px;font-weight:700;
+    width:28px;height:28px;border-radius:8px;
+    background:var(--accent-wash);color:var(--accent-deep);
+    display:flex;align-items:center;justify-content:center;letter-spacing:0;
+    margin-top:1px;transition:.2s;
+  }
+  .step.done .step-num{background:var(--accent);color:#fff}
+  .step-titles{flex:1;min-width:0}
+  .step-title{font-size:17px;font-weight:700;letter-spacing:-.02em}
+  .step-goal{font-size:13px;color:var(--ink-faint);margin-top:3px;font-weight:500}
+  .check{
+    flex-shrink:0;width:22px;height:22px;border-radius:7px;
+    border:2px solid var(--line);background:var(--card-2);margin-top:2px;
+    display:flex;align-items:center;justify-content:center;transition:.15s;
+  }
+  .step.done .check{background:var(--accent);border-color:var(--accent)}
+  .check svg{width:13px;height:13px;stroke:#fff;stroke-width:3.2;fill:none;
+    stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:.15s;
+    stroke-dasharray:20;stroke-dashoffset:20;}
+  .step.done .check svg{opacity:1;stroke-dashoffset:0}
+
+  .step-body{padding:0 17px 4px 56px}
+  .step.done .step-body{display:none}
+
+  /* spoken line */
+  .say{
+    position:relative;font-size:17.5px;line-height:1.75;
+    color:var(--ink);padding:12px 0 12px 16px;
+    border-left:2px solid var(--accent-wash);
+    margin-bottom:2px;
+  }
+  .say + .say{border-top:1px dashed var(--line-soft)}
+  .say .copy{
+    position:absolute;top:10px;right:0;
+    font-family:var(--mono);font-size:10.5px;font-weight:600;letter-spacing:.04em;
+    color:var(--ink-faint);background:var(--card-2);
+    border:1px solid var(--line);border-radius:6px;padding:3px 8px;
+    cursor:pointer;opacity:0;transition:.15s;
+  }
+  .say:hover .copy{opacity:1}
+  .say .copy:hover{color:var(--accent);border-color:var(--accent)}
+  .say .copy.done{color:var(--accent);border-color:var(--accent)}
+
+  mark{
+    background:linear-gradient(transparent 55%, var(--mark) 55%);
+    color:var(--ink);font-weight:700;padding:0 1px;border-radius:1px;
+  }
+  .slot{
+    font-weight:700;color:var(--accent-deep);
+    border-bottom:1.5px dashed var(--accent);padding:0 2px;white-space:nowrap;
+  }
+
+  /* action / tip callouts */
+  .do,.tip{
+    display:flex;gap:9px;align-items:flex-start;
+    font-size:14.5px;line-height:1.62;border-radius:9px;
+    padding:10px 13px;margin:9px 0 4px;
+  }
+  .do{background:var(--accent-wash);color:var(--accent-deep)}
+  .tip{background:var(--card-2);color:var(--ink-soft);border:1px solid var(--line-soft)}
+  .warn{background:var(--alert-wash);color:var(--alert)}
+  .do .lab,.tip .lab,.warn .lab{
+    flex-shrink:0;font-family:var(--mono);font-size:10.5px;font-weight:700;
+    letter-spacing:.06em;padding:2px 7px;border-radius:5px;margin-top:1px;
+  }
+  .do .lab{background:var(--accent);color:#fff}
+  .tip .lab{background:var(--line);color:var(--ink-soft)}
+  .warn .lab{background:var(--alert);color:#fff}
+  .do b,.tip b,.warn b{font-weight:700}
+
+  /* ---------- objection FAB + overlay ---------- */
+  .fab{
+    position:fixed;right:20px;bottom:20px;z-index:60;
+    font-family:var(--sans);font-size:16px;font-weight:800;letter-spacing:-.02em;
+    color:#fff;background:var(--alert);
+    border:none;border-radius:999px;padding:15px 22px 15px 18px;
+    box-shadow:0 4px 14px rgba(190,83,48,.38),0 2px 4px rgba(0,0,0,.1);
+    cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+    transition:transform .15s,box-shadow .2s;
+  }
+  .fab:hover{transform:translateY(-2px);box-shadow:0 8px 22px rgba(190,83,48,.45)}
+  .fab:active{transform:translateY(0)}
+  .fab svg{width:18px;height:18px;fill:none;stroke:#fff;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+
+  .overlay{
+    position:fixed;inset:0;z-index:70;display:none;
+  }
+  .overlay.open{display:block}
+  .scrim{
+    position:absolute;inset:0;background:rgba(20,30,29,.32);
+    backdrop-filter:blur(1.5px);opacity:0;transition:opacity .25s;
+  }
+  .overlay.open .scrim{opacity:1}
+  .sheet{
+    position:absolute;top:0;right:0;bottom:0;
+    width:min(460px,100%);background:var(--paper);
+    box-shadow:-8px 0 40px rgba(20,30,29,.18);
+    display:flex;flex-direction:column;
+    transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+  }
+  .overlay.open .sheet{transform:none}
+  .sheet-head{
+    padding:16px 18px 12px;border-bottom:1px solid var(--line);
+    background:var(--card);
+  }
+  .sheet-title-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:11px}
+  .sheet-title{font-size:18px;font-weight:800;letter-spacing:-.02em;display:flex;align-items:center;gap:7px}
+  .sheet-title .dot{width:8px;height:8px;border-radius:99px;background:var(--alert)}
+  .close-x{
+    background:transparent;border:none;cursor:pointer;padding:5px;border-radius:8px;
+    color:var(--ink-soft);display:flex;transition:.15s;
+  }
+  .close-x:hover{background:var(--card-2);color:var(--ink)}
+  .close-x svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+  .search-box{position:relative}
+  .search-box svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);
+    width:16px;height:16px;fill:none;stroke:var(--ink-faint);stroke-width:2;stroke-linecap:round}
+  .search-box input{
+    width:100%;font-family:var(--sans);font-size:15.5px;
+    padding:12px 12px 12px 38px;border-radius:10px;
+    border:1px solid var(--line);background:var(--paper);color:var(--ink);
+    outline:none;transition:.15s;
+  }
+  .search-box input:focus{border-color:var(--alert);box-shadow:0 0 0 3px var(--alert-wash)}
+  .search-box input::placeholder{color:var(--ink-faint)}
+
+  .sheet-body{flex:1;overflow-y:auto;padding:14px 18px 28px;-webkit-overflow-scrolling:touch}
+  .obj{
+    background:var(--card);border:1px solid var(--line);border-radius:12px;
+    margin-bottom:10px;overflow:hidden;transition:border-color .2s;
+  }
+  .obj.open{border-color:var(--alert)}
+  .obj-btn{
+    width:100%;text-align:left;background:transparent;border:none;cursor:pointer;
+    padding:14px 15px;display:flex;align-items:center;gap:11px;
+    font-family:var(--sans);
+  }
+  .obj-ico{font-size:21px;flex-shrink:0;line-height:1}
+  .obj-labels{flex:1;min-width:0}
+  .obj-name{font-size:16px;font-weight:700;color:var(--ink);letter-spacing:-.02em}
+  .obj-quote{font-size:13px;color:var(--ink-faint);margin-top:3px;font-weight:500}
+  .obj-chev{flex-shrink:0;color:var(--ink-faint);transition:transform .25s}
+  .obj.open .obj-chev{transform:rotate(180deg);color:var(--alert)}
+  .obj-chev svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.3;stroke-linecap:round;stroke-linejoin:round}
+
+  .obj-body{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .obj-inner{padding:2px 15px 15px}
+  .layer{margin-top:12px}
+  .layer:first-child{margin-top:2px}
+  .layer-lab{
+    font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;
+    padding:3px 8px;border-radius:5px;display:inline-block;margin-bottom:7px;
+  }
+  .l1 .layer-lab{background:var(--alert);color:#fff}
+  .l2 .layer-lab{background:var(--card-2);color:var(--ink-soft);border:1px solid var(--line)}
+  .l3 .layer-lab{background:var(--accent-wash);color:var(--accent-deep)}
+  .layer p{font-size:15.5px;line-height:1.7;color:var(--ink)}
+  .l1 p{font-weight:600}
+  .l2 p{color:var(--ink-soft);font-size:15px}
+  .l2 .pts{list-style:none;padding:0;margin:0;counter-reset:pt}
+  .l2 .pts li{
+    position:relative;counter-increment:pt;
+    font-size:15px;line-height:1.62;color:var(--ink-soft);
+    padding:9px 0 9px 29px;border-top:1px dashed var(--line-soft);
+  }
+  .l2 .pts li:first-child{border-top:none;padding-top:2px}
+  .l2 .pts li b{color:var(--ink);font-weight:700}
+  .l2 .pts li::before{
+    content:counter(pt);position:absolute;left:0;top:8px;
+    font-family:var(--mono);font-size:11px;font-weight:700;
+    width:20px;height:20px;border-radius:5px;
+    background:var(--card-2);border:1px solid var(--line);color:var(--ink-soft);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .l2 .pts li:first-child::before{top:1px}
+
+  .no-result{text-align:center;color:var(--ink-faint);font-size:14.5px;padding:36px 10px}
+
+  /* footer note */
+  .foot{max-width:820px;margin:8px auto 0;padding:0 20px;
+    font-size:12.5px;color:var(--ink-faint);line-height:1.6}
+
+  @media (max-width:520px){
+    .topbar-inner,main,.progress-wrap,.foot{padding-left:15px;padding-right:15px}
+    .brand-row{flex-wrap:wrap;row-gap:8px}
+    .btn-group{width:100%;justify-content:flex-end}
+    .step-body{padding-left:48px}
+    .say{font-size:16.5px}
+    .fab{right:14px;bottom:14px;padding:14px 19px 14px 16px;font-size:15px}
+    .call-head h1{font-size:21px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{transition:none!important;animation:none!important}
+  }
+  :focus-visible{outline:2.5px solid var(--accent);outline-offset:2px;border-radius:6px}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-inner">
+    <div class="brand-row">
+      <div class="brand">
+        <span class="logo">바른비즈</span>
+        <span class="sub">콜 가이드 · 정책자금 상담</span>
+      </div>
+      <div class="btn-group">
+        <span class="save-flash" id="saveFlash">
+          <svg viewBox="0 0 24 24"><path d="M5 12l4.5 4.5L19 6"/></svg>저장됨
+        </span>
+        <button class="edit-btn" id="editBtn" onclick="toggleEditMode()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+          <span class="editBtnLabel">멘트 수정</span>
+        </button>
+        <button class="reset-btn" id="resetEditsBtn" onclick="resetEdits()" style="display:none">
+          원본으로
+        </button>
+        <button class="reset-btn" onclick="resetCall()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+          새 상담
+        </button>
+      </div>
+    </div>
+    <div class="tabs">
+      <button class="tab active" data-tab="call1" onclick="switchTab('call1')">
+        1차콜 · 상담<span class="tab-en">SCREENING</span>
+      </button>
+      <button class="tab" data-tab="call2" onclick="switchTab('call2')">
+        2차콜 · 계약<span class="tab-en">CLOSING</span>
+      </button>
+      <button class="tab" data-tab="call3" onclick="switchTab('call3')">
+        접수 전 확인<span class="tab-en">CONSENT</span>
+      </button>
+    </div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress"><div class="progress-bar" id="progBar"></div></div>
+    <div class="progress-label" id="progLabel">0 / 0 단계</div>
+  </div>
+</div>
+
+<main>
+  <!-- ============ 1차콜 ============ -->
+  <section class="panel active" id="call1">
+    <div class="call-head">
+      <h1>1차콜 — 상담</h1>
+      <p>목표: 니즈 확인하고 스크리닝 → 검토 후 재연락 약속으로 <b>2차콜 예약</b></p>
+    </div>
+  </section>
+
+  <!-- ============ 2차콜 ============ -->
+  <section class="panel" id="call2">
+    <div class="call-head">
+      <h1>2차콜 — 계약</h1>
+      <p>목표: 조건·비용 투명하게 설명하고 <b>모두싸인 계약 확정</b></p>
+    </div>
+  </section>
+
+  <!-- ============ 접수 전 확인 ============ -->
+  <section class="panel" id="call3">
+    <div class="call-head">
+      <h1>접수 전 확인 — 녹취·계약 재고지</h1>
+      <p>목표: 재단 접수 <b>직전</b>, 녹취 동의 + 계약 내용(자문료 지불 의무) <b>재확인</b> 후 접수</p>
+    </div>
+  </section>
+</main>
+
+<div class="foot">
+  <span class="slot">점선 밑줄</span> 부분은 고객마다 바꿔서 말하는 값이에요. · 우측 하단 <b style="color:var(--alert)">반론 대응</b> 버튼은 두 탭 어디서나 눌러 쓸 수 있어요.
+</div>
+
+<!-- floating objection button -->
+<button class="fab" onclick="openObj()">
+  <svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20z"/><path d="M12 8v5"/><path d="M12 16.5h.01"/></svg>
+  반론 대응
+</button>
+
+<!-- objection overlay -->
+<div class="overlay" id="objOverlay">
+  <div class="scrim" onclick="closeObj()"></div>
+  <div class="sheet" role="dialog" aria-label="반론 대응">
+    <div class="sheet-head">
+      <div class="sheet-title-row">
+        <div class="sheet-title"><span class="dot"></span>반론 대응</div>
+        <button class="close-x" onclick="closeObj()" aria-label="닫기">
+          <svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="search-box">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+        <input id="objSearch" type="text" placeholder="상황 검색 — 비용, 사기, 신용, 생각해볼게요…" oninput="filterObj(this.value)">
+      </div>
+    </div>
+    <div class="sheet-body" id="objList"></div>
+  </div>
+</div>
+
+<script>
+/* ---------------- data ---------------- */
+const H = s => s; // passthrough for readability
+
+const CALL1 = [
+  { title:"오프닝 · 통화 허락", goal:"인사 → 목적 → 통화 괜찮은지",
+    say:[
+      `여보세요~ <span class="slot">○○○</span> 대표님 맞으실까요?`,
+      `안녕하세요. 사업자 정책자금 문의주셔서 연락드렸습니다. <mark>잠시 통화 괜찮으신가요?</mark>`
+    ]},
+  { title:"소개 · 스크리닝 안내", goal:"소속 밝히고 바로 자격 확인 절차로 안내",
+    say:[
+      `저는 중소기업 상담회사 <mark>바른비즈</mark>의 <span class="slot">김용준</span> 팀장입니다.`,
+      `제가 간단하게 몇 가지 여쭤보고 <mark>정책자금 조달 가능하신지</mark> 확인 한번 해드리겠습니다.`
+    ],
+    do:[`CRM 상담 시스템 항목 확인 — <b>업종 / 개업시기 / 매출 / 기존 대출 / 필요 자금</b> 등`],
+    tip:[`질문이 곧 스크리닝이에요. 대답 들으면서 '이 분 진행 되겠다' 감이 오면 톤을 조금 더 확신 있게.`]},
+  { title:"세무기장 확인", goal:"세무기장 이용여부 + 월 납부액 확인 (스크리닝 보강)",
+    say:[
+      `혹시 <mark>세무기장</mark>은 이용하고 계신가요?`,
+      `이용하고 계시면, <mark>한 달에 얼마 정도</mark> 납부하고 계세요?`
+    ],
+    tip:[`기장 여부·금액도 매출 신뢰도를 가늠하는 참고 항목이에요. 스크리닝 마지막에 자연스럽게 붙여서 물어보세요.`]},
+  { title:"소프트 클로징 · 2차콜 예약", goal:"검토 후 재연락 약속 + 카톡 명함 + 번호 저장",
+    say:[
+      `이제 확인은 다 마쳤고요, 한두 시간 이내로 대표님 말씀하신 <span class="slot">○○○</span>만원 진행 가능하실지 검토해서 다시 연락드릴게요.`,
+      `카톡으로 <mark>명함 하나 발송</mark>드릴게요. 제 번호도 저장해주시고요. 다시 연락드리겠습니다. 감사합니다.`
+    ],
+    do:[`통화 후 <b>카톡 명함 발송</b> + 검토 결과 정리 → 2차콜 준비`]}
+];
+
+const CALL2 = [
+  { title:"오프닝 · 재접촉", goal:"검토 완료 통보 + 통화 가능 여부 확인",
+    say:[
+      `네 대표님~ <span class="slot">(언제)</span> 사업자 정책자금 상담해드린 바른비즈 <span class="slot">김용준</span> 팀장입니다.`,
+      `구두상으로 말씀해주신 정보 토대로 검토는 대략 마쳤고요. 한 가지 설명드릴 게 있는데 <mark>잠시 통화 괜찮으시죠?</mark>`
+    ]},
+  { title:"안내 · 예상 조건", goal:"한도·금리·상환·거치·소요기간 브리핑",
+    say:[
+      `검토해보니 현재 <span class="slot">○○○</span>만원 한도 예상되시고, 금리는 <mark>2~4%대</mark>로 접수드릴 예정이에요. 금리는 크게 변동 없으신데, 한도는 심사를 받으셔야 정확한 금액이 나오세요.`,
+      `자금 조달되시면 상환기간이 보통 <mark>5년</mark>이시고, 그 5년 중 초기 <mark>1~2년</mark> 정도는 거치기간이 들어가는 게 대부분이에요. 나머지는 원리금균등분할방식으로 납부 들어갑니다.`,
+      `진행 기간은 보통 <mark>2주</mark>에서 늦어지면 한 달 정도까지 소요될 수 있는 점 참고해주시고요. 한도 감액이 심하다 싶으면 최대한으로 진행 도와드릴 거니까 염려 안 하셔도 돼요.`
+    ]},
+  { title:"절차 안내 · 담당 구조", goal:"인가받은 자문사 → 진행 방식 → 경영지도사 서포트 구조",
+    say:[
+      `우선 절차 안내 좀 도와드릴게요. 저희 센터는 중소기업 상담회사로 <mark>정식 인가받은 경영컨설팅 자문회사</mark>입니다. 저희가 하는 일이 사업에 필요한 경영컨설팅업이고, 그중 대표님이 지금 필요로 하시는 자금조달 관련해서도 자문을 제공하고 있어요.`,
+      `경영 안정화를 도와드리는 게 목표라, 진행 들어가면 사업에 대한 분석을 하고 단계적인 계획을 세워서 컨설팅·정보제공·자금조달 자문이 이루어져요.`,
+      `자금 실행 과정은 비대면이나 대면 중 해당하는 과정으로 진행되고, 경우에 따라 정부기관이나 은행은 직접 방문해주셔야 할 수도 있어요. 다만 어디로 가야 하는지, 뭘 준비해야 하는지, 기관 인터뷰는 어떻게 하는지 그런 전반적인 실행 상황은 <mark>전부 제가 서포트</mark> 해드려요.`,
+      `워낙 많은 대표님들이 의뢰를 주시다 보니 경영지도사가 직접 모든 처리를 하기는 어려워요. 그래서 당사에 상주하고 있는 <mark>전문 경영지도사의 컨설팅 자문</mark>을 토대로, 제가 담당이 되어 자문 진행을 도와드릴 거예요.`
+    ],
+    tip:[`경영지도사 언급은 '나 혼자 임의로 하는 게 아니라 전문가 자문 체계 위에서 움직인다'는 신뢰 포인트예요.`]},
+  { title:"비용 안내", goal:"플랜/비용 구조 → 후불제 → 88만원/천만원 → 세금계산서·부가세 환급",
+    say:[
+      `조달 원하시는 금액에 따라 플랜을 설정해서 진행할 거고, 플랜에 따른 비용은 발생하지만 <mark>비용을 먼저 지불하시는 건 절대 아니에요.</mark>`,
+      `저희는 중소기업상담회사로 정식 인가받은 법인회사라서, 당사의 자문·정보제공·서포트를 토대로 정책지원사업 자금을 대표님 계좌로 최종 입금받으신 <mark>이후에</mark> 비용 결제를 해주시면 됩니다.`,
+      `플랜 비용은 계산하기 쉽게, 조달비용금액 <mark>천만원당 부가세 포함 88만원</mark>으로 보시면 되고요. 저희는 인가받은 법인기업이라서 자금조달 받고 나시면 <mark>세금계산서</mark>도 발행해드리고, <mark>부가세 환급</mark>도 받아보실 수 있습니다. 여기까지 이해되셨죠?`
+    ],
+    tip:[`'선지급 아님 → 입금 후 결제 → 세금계산서 발행·부가세 환급 가능'이 이 스텝의 핵심 신뢰 축이에요.`]},
+  { title:"가치 재강조 · 선제 방어", goal:"고객이 반론 걸기 전에 먼저 깔아주는 멘트",
+    say:[
+      `이 비용은 매달·매년 내는 게 아니시고, 플랜이 종료됐을 때 <mark>딱 한 번만</mark> 결제하시는 비용이에요. 진행하시다가 혹시나 <mark>부결이 될 경우엔 1원 한 푼 들어가는 비용은 없으세요.</mark>`,
+      `컨설팅 비용이 들더라도 저희를 통해 하시는 이유가, <mark>저금리</mark>로 진행되는 부분이잖아요. 요즘 담보대출도 5~6% 이상으로 나오는 시점에서 2~4%인 저금리로 진행되니까 금리 부분에서 당연히 만족하세요.`,
+      `정책자금은 받으셔도 <mark>신용점수 하락이나 변동이 없으세요.</mark> 나중에 추가자금 이용하실 때도 신용변동이 없으니 이용이 편하시고요. 제일 중요한 건, 중간에 목돈 생겨서 중도상환 하실 일이 있어도 <mark>중도상환수수료가 전혀 없으니</mark> 부담 없이 원금 상환하시면 돼요.`,
+      `요즘 은행 가셔도 사업자 대출 상품이 따로 없다 보니, 신용으로 받으면 한도도 적게 나오고 금리도 높게 나오잖아요. 그래서 사업하시는 대표님들은 <mark>정책자금으로만</mark> 많이 이용하시거든요.`
+    ]},
+  { title:"클로징 · 진행 제안", goal:"확답 유도. 여기서 반론 나오면 우측 버튼 활용",
+    say:[
+      `대표님, 이렇게 <mark>진행 한번 도와드려 볼까요?</mark>`
+    ],
+    tip:[`머뭇거리거나 반론 나오면 → 우측 하단 <b style="color:var(--alert)">반론 대응</b> 열어서 상황별 멘트로.`]},
+  { title:"계약 · 전자계약 발송 안내", goal:"모두싸인 발송 예고 + 사업자등록증·자택주소 확보",
+    say:[
+      `안전하게 계약 체결을 해드리기 위해 <mark>전자계약서</mark> 발송해드릴게요. 카톡으로 <mark>모두싸인</mark>이라고 전자계약서가 발송 들어갈 건데, 작성 방법을 카톡으로 자세히 정리해서 보내드릴게요.`,
+      `혹시 하시다가 안 되는 부분 있으면 바로 도와드릴 테니 전화 주시고요.`,
+      `그리고 계약서에 대표님 사업장 정보를 정확히 기재해야 해서, <mark>사업자등록증 사진</mark> 하나 찍어서 제 번호로 문자나 카톡 중 편하신 걸로 보내주시면 됩니다. 전화 끊고 하나 보내주세요.`,
+      `<span class="slot">[자택주소 확인]</span> 감사합니다.`
+    ],
+    do:[`<b>모두싸인 작성법 카톡 발송</b> · 통화 중 <b>자택주소 확인</b> · 통화 후 <b>사업자등록증 사진</b> 수령 확인`],
+    tip:[`이번 버전은 3페이지·9페이지 같은 세부 작성법을 통화 중에 설명하지 않고 카톡으로 대체해요. 전화가 길어지는 걸 막기 위한 구조예요.`]}
+];
+
+const CALL3 = [
+  { title:"접수 개시 고지", goal:"재단 정책자금 접수 진행 안내",
+    say:[
+      `대표님, 이제 재단 정책자금 <span class="slot">(소상공인정책자금 등)</span> 접수 진행하겠습니다.`,
+      `접수 전에 다시 한번 대표님과 저희 회사 간의 <mark>계약 내용</mark>을 설명드릴게요.`
+    ]},
+  { title:"녹취 고지", goal:"통화 녹취 동의 및 법적 효력 안내",
+    say:[
+      `모든 통화는 대표님 <mark>동의하에 녹취</mark>됨을 알려드리고요. 이건 <mark>법적으로 효력</mark>이 있어서, 혹여나 법적 분쟁 시 <mark>증거자료로 제출</mark>될 수 있다는 점 알려드립니다.`
+    ],
+    tip:[`이 고지는 생략하지 말고 매 건 동일하게 읽어주세요 — 분쟁 시 절차 준수 여부가 그대로 증빙이 돼요.`]},
+  { title:"계약 내용 재확인 · 응답 분기", goal:"모두싸인 인지 + 자문료 지불 의무 재확인 → 응답에 따라 분기",
+    say:[
+      `사전에 대표님과 당사는 <mark>모두싸인</mark>이라는 전자계약서를 인지하신 후 동의하에 작성하였으며, 추후 <mark>자금 조달 시 플랜에 상응하는 자문료</mark>를 당사에 지불하셔야 한다는 내용, 인지하고 계신 거죠?`
+    ],
+    do:[`<b>"인지했다"</b> 응답 시 → "네, 그럼 대표님이 계약 내용 인지하셨고 동의하에 진행하겠습니다." 로 바로 접수 진행`],
+    warn:[`<b>"인지 못했다 / 기억 안 난다"</b> 응답 시 → 접수 진행 <b>보류.</b> 계약 내용(전자계약 작성 사실, 자문료 지불 의무) 재안내·설득으로 정확히 인지시킨 후에만 접수 진행.`],
+    tip:[`거부반응이 나오면 절대 넘어가지 말고 이 스텝에서 멈추세요. 인지 확인 없이 접수하면 나중에 분쟁 소지가 커요.`]}
+];
+
+const OBJECTIONS = [
+  { ico:"💰", name:"비용 · 수수료", quote:'"수수료 비싸네요 / 정부지원인데 왜 돈을 내요?"',
+    key:"비용 수수료 돈 비싸 무료 정부지원 88만원 가격",
+    l1:`네 대표님, 비용은 진행 끝나고 <b>자금 받으신 다음에 후불로만</b> 내시는 거예요. 먼저 나가는 돈은 한 푼도 없으세요.`,
+    l2:`정부지원 자금 자체는 무료지만, 그 자금 받기까지 사업분석·서류·기관 인터뷰 준비를 저희가 다 서포트해드리는 비용이에요. 천만원당 부가세 포함 88만원이고, 이것도 자금 수령 후 딱 한 번. 부결나면 0원이고요. 저금리(2~4%)로 받으시는 거라 일반 담보(5~6%)랑 이자 차액으로 금방 상쇄돼요. 그리고 타 업체처럼 <b>보험 가입을 요구하거나, 자금 나온 뒤에 추가비용을 청구하는 것도 저흰 일절 없어요.</b> 처음 안내드린 금액 그대로예요.`,
+    l3:`선불도 아니고 부결나면 0원이니까 부담 갖지 마시고, 일단 한도부터 정확히 뽑아볼까요?` },
+
+  { ico:"🛡️", name:"사기 · 보이스피싱 의심", quote:'"사기/보이스피싱 아니에요? 선수수료 요구하던데"',
+    key:"사기 보이스피싱 신뢰 믿을 선수수료 선입금 의심 진짜 정식 법인 조작 검색",
+    l1:`그 걱정 당연하세요. 저희가 <b>구조적으로 사기 칠 이유가 없다</b>는 걸 딱 다섯 가지로 말씀드릴게요.`,
+    l2:[
+      `자금이 <b>나와야만</b> 자문료를 받는 구조예요. 자금 안 나오면 저희도 한 푼도 못 받아요. 대표님이 먼저 주시는 게 아니라 받으신 후에 드리는 거라, 사기 칠 동기 자체가 없어요.`,
+      `정식 인가 법인이에요. <b>중소벤처기업부 등록</b> 중소기업 상담회사고, 네이버·구글에 '바른비즈' 검색하시면 회사 정보가 바로 나와요.`,
+      `사기 업체 특징이 선입금 요구인데, 저흰 <b>계약 전에도 진행 중에도 단 한 번도</b> 먼저 돈을 요구하지 않아요.`,
+      `구두 약속이 아니라 <b>정식 계약서</b>를 써요. 업무 범위·자문료·환불 조건이 다 명시돼요. 사기 업체는 계약서 쓰는 것 자체를 꺼려요.`,
+      `저희가 서류를 <b>대신 만들거나 조작하지 않아요.</b> 대표님이 직접 준비·제출하시고, 저흰 개입할 영역 자체가 없어요.`
+    ],
+    l3:`검색부터 한번 해보시고요. 그다음 명함이랑 예상 한도 편하게 받아보실래요?` },
+
+  { ico:"📉", name:"신용 걱정", quote:'"정책자금 받으면 신용점수 떨어지죠?"',
+    key:"신용 점수 하락 떨어 등급 변동 영향",
+    l1:`아니에요 대표님, 정책자금은 <b>신용점수 하락이나 변동이 없으세요.</b>`,
+    l2:`일반 신용대출과 달라서 이걸 받는다고 점수가 깎이지 않고, 나중에 추가자금 쓰실 때도 신용변동이 없어서 오히려 이용이 편해요. 중도상환수수료도 없어서 중간에 목돈 생기면 언제든 원금 갚으셔도 손해가 없으세요.`,
+    l3:`신용 부담 없이 쓰실 수 있는 자금이니까, 한도 얼마나 되는지부터 볼까요?` },
+
+  { ico:"🏦", name:"직접 하겠다", quote:'"그냥 은행 가서 직접 받으면 되잖아요"',
+    key:"직접 은행 혼자 스스로 알아서 필요없",
+    l1:`그럼요, 직접 하셔도 되는데 요즘 은행엔 <b>사업자 전용 상품이 거의 없어서</b> 신용으로 받으시게 되거든요.`,
+    l2:`신용으로 받으면 한도도 적고 금리도 높게(5~6%) 나와요. 정책자금은 2~4%대라 차이가 크고, 어디로 가야 하는지·뭘 준비하는지·기관 인터뷰는 어떻게 하는지가 은근 까다로운데 그걸 저희가 전부 서포트해드려요. 그래서 사업하시는 분들이 정책자금으로 많이 하세요.`,
+    l3:`직접 알아보시는 것도 방법인데, 한도랑 금리 비교부터 무료로 뽑아드릴게요. 보고 결정하셔도 안 늦으세요.` },
+
+  { ico:"⏸️", name:"생각해볼게요", quote:'"음… 좀 더 생각해볼게요"',
+    key:"생각 고민 나중에 미루 천천히 알아서 볼게요",
+    l1:`네 그럼요, 충분히 생각하셔야죠. 근데 <b>어떤 부분이 제일 걸리세요?</b> 비용이세요, 아니면 진행이 될지가 궁금하신 거세요?`,
+    l2:`(막연한 '생각'을 구체적 반론으로 끄집어내는 게 핵심.) 검토받는 것 자체는 비용도 의무도 없으세요. 오늘 접수 안 하셔도 되는데, 정책자금은 예산이 한정돼 있어서 접수가 늦어지면 조건이 바뀌거나 마감되기도 해요. 그래서 자리라도 먼저 잡아두시는 걸 추천드려요.`,
+    l3:`지금 결정하시란 게 아니라, 한도부터 정확히 뽑아보고 그거 보고 천천히 생각하셔도 돼요. 그건 도와드려도 될까요?` },
+
+  { ico:"📊", name:"한도 불만", quote:'"한도가 생각보다 적네요"',
+    key:"한도 적다 작다 금액 부족 얼마 낮",
+    l1:`지금 말씀드린 건 <b>구두상 예상치</b>고요, 실제로는 심사 받으셔야 정확한 금액이 나오세요.`,
+    l2:`예상보다 감액이 심하게 되면 저희가 최대한으로 끌어올려서 진행 도와드려요. 사업분석하고 계획을 단계적으로 세워서 접수하기 때문에, 혼자 넣으시는 것보다 한도가 잘 나오는 편이에요.`,
+    l3:`일단 정식으로 한도부터 뽑아보시고, 금액 보고 진행 여부 결정하셔도 돼요. 손해볼 거 없으세요.` },
+
+  { ico:"👥", name:"상의해볼게요", quote:'"배우자/동업자랑 상의해볼게요"',
+    key:"상의 배우자 아내 남편 동업자 가족 논의 물어",
+    l1:`네 당연히 상의하셔야죠. 상의하실 때 필요한 자료를 제가 <b>깔끔하게 정리해서 보내드릴게요.</b>`,
+    l2:`보통 배우자분·동업자분이 궁금해하시는 게 '비용이 먼저 나가냐', '신용에 문제 없냐' 이 두 가진데, 둘 다 걱정 안 하셔도 돼요. 비용은 자금 받으신 후 후불이고, 신용변동도 없어요. 이 부분 정리해서 카톡으로 보내드리면 상의하시기 편하실 거예요.`,
+    l3:`상의하시는 동안 한도는 미리 뽑아둘 수 있어요. 그래야 '얼마 나온다더라' 하고 구체적으로 얘기되시거든요. 그 준비만 해둘까요?` },
+
+  { ico:"🔍", name:"타사 비교", quote:'"다른 데도 알아보는 중이에요"',
+    key:"타사 비교 다른 곳 견적 알아보 경쟁사 다른데",
+    l1:`네 여러 군데 비교해보시는 게 맞아요. 비교하실 때 <b>딱 네 가지만</b> 확인해보세요.`,
+    l2:`첫째 선수수료 요구하는지(저흰 후불), 둘째 부결나면 비용 받는지(저흰 0원), 셋째 세금계산서 발행되는 법인인지(저흰 발행), 넷째 보험 가입이나 자금 조달 후 추가비용을 요구하는지(저흰 일절 없음). 이 네 개 물어보시면 정상적인 데랑 아닌 데가 갈려요. 저흰 다 통과되는 부분이고요.`,
+    l3:`비교는 하시되, 저희 조건이랑 예상 한도는 알고 계셔야 비교가 되잖아요. 그것부터 뽑아드릴까요?` }
+];
+
+/* ---------------- edit mode / local persistence ---------------- */
+const EDIT_KEY = 'bareunbiz_call_guide_edits_v1';
+let EDITS = {};
+try{ EDITS = JSON.parse(localStorage.getItem(EDIT_KEY)) || {}; }catch(e){ EDITS = {}; }
+let EDIT_MODE = false;
+let saveTimer = null;
+
+function applyEdit(key, defaultHtml){
+  return Object.prototype.hasOwnProperty.call(EDITS,key) ? EDITS[key] : defaultHtml;
+}
+function saveEditsNow(){
+  try{ localStorage.setItem(EDIT_KEY, JSON.stringify(EDITS)); flashSaved(); }
+  catch(e){ console.error('저장 실패', e); }
+}
+function saveEditsDebounced(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveEditsNow, 500);
+}
+function flashSaved(){
+  const el = document.getElementById('saveFlash');
+  if(!el) return;
+  el.classList.add('show');
+  clearTimeout(el._t);
+  el._t = setTimeout(()=>el.classList.remove('show'),1300);
+}
+function wireEditable(root){
+  root.querySelectorAll('[data-key]').forEach(el=>{
+    el.contentEditable = EDIT_MODE ? 'true' : 'false';
+    if(!el.dataset.wired){
+      el.dataset.wired = '1';
+      el.addEventListener('input', ()=>{
+        EDITS[el.dataset.key] = el.innerHTML;
+        saveEditsDebounced();
+      });
+      el.addEventListener('blur', ()=>{
+        EDITS[el.dataset.key] = el.innerHTML;
+        saveEditsNow();
+      });
+    }
+  });
+}
+function toggleEditMode(){
+  EDIT_MODE = !EDIT_MODE;
+  document.body.classList.toggle('edit-mode', EDIT_MODE);
+  document.querySelectorAll('[data-key]').forEach(el=>{ el.contentEditable = EDIT_MODE ? 'true' : 'false'; });
+  const btn = document.getElementById('editBtn');
+  btn.classList.toggle('active', EDIT_MODE);
+  btn.querySelector('.editBtnLabel').textContent = EDIT_MODE ? '수정 완료' : '멘트 수정';
+  document.getElementById('resetEditsBtn').style.display = EDIT_MODE ? 'inline-flex' : 'none';
+}
+function resetEdits(){
+  if(!confirm('수정한 멘트를 전부 원본으로 되돌릴까요? 이 작업은 되돌릴 수 없어요.')) return;
+  localStorage.removeItem(EDIT_KEY);
+  location.reload();
+}
+
+/* ---------------- render steps ---------------- */
+function renderSteps(list, mountId, prefix){
+  const mount = document.getElementById(mountId);
+  list.forEach((s,i)=>{
+    const el = document.createElement('div');
+    el.className='step';
+    let body = '';
+    (s.say||[]).forEach((line,j)=>{
+      const key = `${prefix}-${i}-say-${j}`;
+      body += `<div class="say"><button class="copy" onclick="copyLine(event)">복사</button><span class="edit-text" data-key="${key}">${applyEdit(key,line)}</span></div>`;
+    });
+    (s.do||[]).forEach((d,j)=>{
+      const key = `${prefix}-${i}-do-${j}`;
+      body += `<div class="do"><span class="lab">할 일</span><span class="edit-text" data-key="${key}">${applyEdit(key,d)}</span></div>`;
+    });
+    (s.warn||[]).forEach((w,j)=>{
+      const key = `${prefix}-${i}-warn-${j}`;
+      body += `<div class="warn"><span class="lab">주의</span><span class="edit-text" data-key="${key}">${applyEdit(key,w)}</span></div>`;
+    });
+    (s.tip||[]).forEach((t,j)=>{
+      const key = `${prefix}-${i}-tip-${j}`;
+      body += `<div class="tip"><span class="lab">팁</span><span class="edit-text" data-key="${key}">${applyEdit(key,t)}</span></div>`;
+    });
+    el.innerHTML = `
+      <div class="step-head" onclick="toggleStep(this)">
+        <span class="step-num">${String(i+1).padStart(2,'0')}</span>
+        <div class="step-titles">
+          <div class="step-title">${s.title}</div>
+          <div class="step-goal">${s.goal}</div>
+        </div>
+        <span class="check"><svg viewBox="0 0 24 24"><path d="M5 12l4.5 4.5L19 6"/></svg></span>
+      </div>
+      <div class="step-body">${body}</div>`;
+    mount.appendChild(el);
+  });
+  wireEditable(mount);
+}
+renderSteps(CALL1,'call1','call1');
+renderSteps(CALL2,'call2','call2');
+renderSteps(CALL3,'call3','call3');
+
+/* ---------------- render objections ---------------- */
+OBJECTIONS.forEach((o,idx)=>{ o._idx = idx; });
+function renderObj(filter=''){
+  const mount = document.getElementById('objList');
+  const f = filter.trim().toLowerCase();
+  const items = OBJECTIONS.filter(o=>{
+    if(!f) return true;
+    return (o.name+o.quote+o.key).toLowerCase().includes(f);
+  });
+  if(items.length===0){ mount.innerHTML = `<div class="no-result">검색 결과가 없어요.<br>'비용', '사기', '생각' 처럼 짧게 검색해보세요.</div>`; return; }
+  mount.innerHTML = items.map(o=>{
+    const idx = o._idx;
+    const l1key = `obj-${idx}-l1`;
+    const l3key = `obj-${idx}-l3`;
+    let l2html;
+    if(Array.isArray(o.l2)){
+      const l2key = `obj-${idx}-l2`;
+      const defaultList = `<ol class="pts">${o.l2.map(p=>`<li>${p}</li>`).join('')}</ol>`;
+      l2html = `<div class="edit-text" data-key="${l2key}">${applyEdit(l2key,defaultList)}</div>`;
+    } else {
+      const l2key = `obj-${idx}-l2`;
+      l2html = `<p class="edit-text" data-key="${l2key}">${applyEdit(l2key,o.l2)}</p>`;
+    }
+    return `
+    <div class="obj">
+      <button class="obj-btn" onclick="toggleObj(this)">
+        <span class="obj-ico">${o.ico}</span>
+        <span class="obj-labels">
+          <span class="obj-name">${o.name}</span>
+          <span class="obj-quote">${o.quote}</span>
+        </span>
+        <span class="obj-chev"><svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg></span>
+      </button>
+      <div class="obj-body"><div class="obj-inner">
+        <div class="layer l1"><span class="layer-lab">즉답</span><p class="edit-text" data-key="${l1key}">${applyEdit(l1key,o.l1)}</p></div>
+        <div class="layer l2"><span class="layer-lab">풀어서</span>${l2html}</div>
+        <div class="layer l3"><span class="layer-lab">이어서 클로징</span><p class="edit-text" data-key="${l3key}">${applyEdit(l3key,o.l3)}</p></div>
+      </div></div>
+    </div>`;}).join('');
+  wireEditable(mount);
+}
+renderObj();
+
+
+
+/* ---------------- interactions ---------------- */
+function switchTab(id){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===id));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===id));
+  updateProgress();
+}
+function toggleStep(head){
+  head.closest('.step').classList.toggle('done');
+  updateProgress();
+}
+function updateProgress(){
+  const panel = document.querySelector('.panel.active');
+  const steps = panel.querySelectorAll('.step');
+  const done = panel.querySelectorAll('.step.done').length;
+  const pct = steps.length ? Math.round(done/steps.length*100) : 0;
+  document.getElementById('progBar').style.width = pct+'%';
+  document.getElementById('progLabel').textContent = `${done} / ${steps.length} 단계`;
+}
+function resetCall(){
+  document.querySelectorAll('.step.done').forEach(s=>s.classList.remove('done'));
+  document.querySelector('main').scrollIntoView({behavior:'smooth',block:'start'});
+  updateProgress();
+}
+function copyLine(e){
+  e.stopPropagation();
+  const btn = e.currentTarget;
+  const say = btn.closest('.say');
+  const txt = say.textContent.replace('복사','').trim();
+  navigator.clipboard?.writeText(txt).then(()=>{
+    btn.textContent='복사됨'; btn.classList.add('done');
+    setTimeout(()=>{btn.textContent='복사'; btn.classList.remove('done');},1400);
+  });
+}
+function openObj(){
+  document.getElementById('objOverlay').classList.add('open');
+  setTimeout(()=>document.getElementById('objSearch').focus(),260);
+}
+function closeObj(){ document.getElementById('objOverlay').classList.remove('open'); }
+function filterObj(v){ renderObj(v); }
+function toggleObj(btn){
+  const obj = btn.closest('.obj');
+  const body = obj.querySelector('.obj-body');
+  const isOpen = obj.classList.contains('open');
+  if(isOpen){ obj.classList.remove('open'); body.style.maxHeight=null; }
+  else{ obj.classList.add('open'); body.style.maxHeight = body.scrollHeight+'px'; }
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape') closeObj();
+});
+updateProgress();
+</script>
+</body>
+</html>

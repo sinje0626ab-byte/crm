@@ -1831,6 +1831,11 @@ body.light-mode .lc-tbl-wrap::-webkit-scrollbar-thumb:hover { background: rgba(3
   border: 1px solid rgba(96,165,250,0.35);
 }
 .nav-btn-loan:hover { background: rgba(96,165,250,0.3); }
+.nav-btn-callguide {
+  background: rgba(251,191,36,0.16); color: #fbbf24;
+  border: 1px solid rgba(251,191,36,0.35);
+}
+.nav-btn-callguide:hover { background: rgba(251,191,36,0.30); color: #fde68a; transform: translateY(-1px); }
 .nav-btn-collect { background:rgba(52,211,153,0.15); color:#34d399; border:1px solid rgba(52,211,153,0.35); }
 .nav-btn-collect:hover { background:rgba(52,211,153,0.30); transform:translateY(-1px); }
 body.light-mode .nav-btn-collect { background:rgba(5,150,105,0.10) !important; color:#065f46 !important; border-color:rgba(5,150,105,0.3) !important; }
@@ -2049,6 +2054,8 @@ body.light-mode .nav-btn-green:hover { background:linear-gradient(135deg,#86efac
 body.light-mode .nav-btn-loan    { background:rgba(29,78,216,0.10) !important; color:#1e40af !important; border-color:rgba(29,78,216,0.28) !important; }
 body.light-mode .nav-btn-consult { background:rgba(99,102,241,0.10) !important; color:#3730a3 !important; border-color:rgba(99,102,241,0.28) !important; }
 body.light-mode .nav-btn-trash   { background:rgba(239,68,68,0.08) !important; color:#b91c1c !important; border-color:rgba(239,68,68,0.25) !important; }
+body.light-mode .nav-btn-callguide { background:rgba(180,83,9,0.10) !important; color:#92400e !important; border-color:rgba(180,83,9,0.28) !important; }
+body.light-mode .nav-btn-callguide:hover { background:rgba(180,83,9,0.20) !important; }
 body.light-mode .trash-count-badge { background:#b91c1c; color:#fff; }
 body.light-mode .settings-btn { background:rgba(0,0,0,0.07); border:1px solid rgba(0,0,0,0.16); color:#374151; }
 body.light-mode .settings-btn:hover { background:rgba(0,0,0,0.13); }
@@ -2780,6 +2787,7 @@ body.light-mode .settings-panel { background:linear-gradient(145deg,#f0fdf4,#eff
   <button class="nav-btn nav-btn-collect" onclick="openCollectView()">💰 수금관리</button>
   <button class="nav-btn nav-btn-loan" onclick="openLoanPanel()">📊 대출계산기</button>
   <button class="nav-btn nav-btn-trash" id="trashNavBtn" onclick="openTrashView()" style="position:relative;">🗑 휴지통<span class="trash-count-badge" id="trashBadge" style="display:none;">0</span></button>
+  <button class="nav-btn nav-btn-callguide" onclick="openCallGuide()" title="콜 가이드를 새 창으로 엽니다">📞 콜가이드</button>
   <button class="nav-btn nav-btn-consult" onclick="openConsultPanel()">💬 상담진행</button>
   <button class="nav-btn nav-btn-green" onclick="openModal()">＋ 신규 고객 등록</button>
   <button class="settings-btn" onclick="openSettings()" title="설정">⚙️</button>
@@ -9827,5 +9835,15 @@ window.addEventListener('DOMContentLoaded', function() {
 
 </script>
 
+<script>
+/* ════ 콜 가이드 — 새 창으로 열기 ════
+   같은 이름의 창을 재사용하므로, 여러 번 눌러도 탭이 계속 늘어나지 않고
+   이미 열려 있던 콜 가이드 창으로 포커스만 이동한다. */
+function openCallGuide() {
+  var w = window.open('call-guide.html', 'barneunCallGuide');
+  if (w) { try { w.focus(); } catch (e) {} }
+  else { alert('팝업이 차단되어 콜 가이드를 열지 못했습니다.\n주소창의 팝업 차단을 해제한 뒤 다시 눌러주세요.'); }
+}
+</script>
 </body>
 </html>
