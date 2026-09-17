@@ -198,7 +198,6 @@ body.light-mode .ctbl thead th:hover { background: #334155; }
 .ctbl tbody tr:hover { background: rgba(96,165,250,0.08); }
 body.light-mode .ctbl tbody tr:hover { background: rgba(5,150,105,0.06); }
 .ctbl-name { font-weight: 800; color: var(--txt); }
-.ctbl-phone { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--dim); }
 .ctbl-empty-row td { text-align: center; padding: 30px; color: var(--dim); }
 /* 보류/취소/부결 행 — 어둡게 */
 .ctbl tbody tr.ctbl-dimmed { background: rgba(0,0,0,0.28); }
@@ -3280,10 +3279,7 @@ body.light-mode .settings-panel { background:linear-gradient(145deg,#f0fdf4,#eff
       </div>
     </div>
     <div style="margin-top:16px;">
-      <div class="qa-row">
-        <div class="qa-field"><label>이름 *</label><input type="text" id="te-name" placeholder="홍길동"></div>
-        <div class="qa-field"><label>연락처</label><input type="text" id="te-phone" placeholder="010-0000-0000"></div>
-      </div>
+      <div class="qa-field"><label>이름 *</label><input type="text" id="te-name" placeholder="홍길동"></div>
       <div class="qa-row">
         <div class="qa-field"><label>지역</label>
           <div style="display:flex;gap:6px;">
@@ -4026,7 +4022,6 @@ function openTblEdit(id) {
   if (!c) return;
   tblEditCid = id;
   document.getElementById('te-name').value = c.name || '';
-  document.getElementById('te-phone').value = c.phone || '';
   // 지역 분해 로드 (시/도 + 구/군)
   const regionVal = c.region || '';
   const sidoList = Object.keys(CS_SIGUNGU);
@@ -4054,7 +4049,6 @@ function saveTblEdit() {
   const name = document.getElementById('te-name').value.trim();
   if (!name) { showToast('⚠️ 이름은 필수입니다'); return; }
   c.name = name;
-  c.phone = document.getElementById('te-phone').value.trim();
   c.region = document.getElementById('te-region').value.trim();
   c.personality = document.getElementById('te-personality').value;
   c.applyRoute = document.getElementById('te-route').value;
@@ -4119,7 +4113,7 @@ function saveQuickAdd() {
     id: uid(),
     tblOnly: true,  // ★ 테이블형 전용 — 카드형/그룹뷰에 안 뜸
     name: name,
-    phone: '',  // 간편등록에서는 연락처를 받지 않음 — 표에는 표시되고, ✎ 수정에서 입력
+    phone: '',  // 테이블형은 연락처를 다루지 않음 (카드형 상세에서 입력)
     region: document.getElementById('qa-region').value.trim(),
     personality: document.getElementById('qa-personality').value,
     applyRoute: document.getElementById('qa-route').value,
@@ -4196,7 +4190,6 @@ function buildTableView(list) {
     const isInactive = ['hold','cancel','rejected'].includes(c.status);
     return `<tr class="${isInactive?'ctbl-dimmed':''}" onclick="renderDetail('${c.id}')">
       <td><span class="ctbl-name">${esc(c.name||'-')}</span></td>
-      <td><span class="ctbl-phone">${esc(c.phone||'-')}</span></td>
       <td style="font-size:12px;">${esc(region)}</td>
       <td>${persona}</td>
       <td class="ctbl-route">${routeBadge}</td>
@@ -4211,7 +4204,6 @@ function buildTableView(list) {
     <table class="ctbl">
       <thead><tr>
         <th onclick="setTblSort('name')">이름${arrow('name')}</th>
-        <th>연락처</th>
         <th onclick="setTblSort('region')">지역${arrow('region')}</th>
         <th onclick="setTblSort('personality')">고객성향${arrow('personality')}</th>
         <th onclick="setTblSort('route')">접수처${arrow('route')}</th>
@@ -4219,7 +4211,7 @@ function buildTableView(list) {
         <th>메모</th>
         <th style="width:52px;text-align:center;">관리</th>
       </tr></thead>
-      <tbody>${rows || '<tr class="ctbl-empty-row"><td colspan="8">고객이 없습니다</td></tr>'}</tbody>
+      <tbody>${rows || '<tr class="ctbl-empty-row"><td colspan="7">고객이 없습니다</td></tr>'}</tbody>
     </table>
   </div>`;
 }
