@@ -109,6 +109,7 @@ CRM 상단의 **📞 콜가이드** 버튼을 누르면 **새 창**으로 열립
 | `call-guide.html` | 콜 가이드 (1차콜 · 2차콜 · 접수 전 확인 + 반론 대응) |
 | `.github/workflows/pages.yml` | main 브랜치 푸시 시 자동 배포 |
 | `.nojekyll` | GitHub Pages의 Jekyll 처리 비활성화 |
+| `game/` | 설원 사냥 게임 (CRM과 무관한 별도 페이지, [설명](game/README.md)) |
 
 인터넷 연결은 글꼴(Google Fonts)을 불러올 때만 사용하며, 연결이 없어도
 기본 글꼴로 정상 동작합니다.

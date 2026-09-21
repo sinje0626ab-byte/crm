@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#d9ecfb" />
+<title>화이트아웃 헌터</title>
+<style>
+  :root {
+    --ink: #22303f;
+    --card: rgba(255, 255, 255, 0.92);
+    --shadow: 0 6px 0 rgba(28, 58, 88, 0.18);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #d9ecfb;
+    font-family: "Trebuchet MS", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
+                 "Noto Sans KR", system-ui, sans-serif;
+    color: var(--ink);
+    user-select: none;
+    touch-action: none;
+  }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #surface { position: fixed; inset: 0; touch-action: none; }
+  #ui { position: fixed; inset: 0; pointer-events: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+
+  .pill {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--card);
+    border: 3px solid #fff;
+    border-radius: 999px;
+    box-shadow: var(--shadow);
+    font-weight: bold;
+    font-size: 20px;
+    letter-spacing: 0.3px;
+  }
+
+  /* 돈 */
+  #money-pill { top: 14px; right: 14px; transition: transform 0.12s ease; }
+  #money-pill.bump { transform: scale(1.12); }
+  .bill {
+    width: 30px; height: 20px; border-radius: 4px;
+    background: linear-gradient(#6fdc8a, #3fb264);
+    border: 2px solid #2d8e4d;
+    display: grid; place-items: center;
+  }
+  .bill::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #dff7e6; }
+
+  /* 체력 + 적재 */
+  #left { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+  #hp-bar {
+    width: 160px; height: 18px; padding: 3px;
+    background: rgba(255, 255, 255, 0.9);
+    border: 3px solid #fff; border-radius: 999px; box-shadow: var(--shadow);
+  }
+  #hp-fill { height: 100%; width: 100%; border-radius: 999px; background: #54d16a; transition: width 0.15s linear, background 0.3s; }
+  #carry-wrap {
+    display: flex; align-items: center; gap: 6px;
+    padding: 5px 12px; font-size: 16px; font-weight: bold;
+    background: var(--card); border: 3px solid #fff; border-radius: 999px; box-shadow: var(--shadow);
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  #carry-wrap.hidden { opacity: 0; transform: translateY(-6px); }
+  #carry-wrap.full { color: #e0553f; }
+  .meat-dot { width: 18px; height: 12px; border-radius: 8px; background: #e2564d; border: 2px solid #b53f38; }
+  #axe-lv { font-size: 14px; opacity: 0.75; }
+
+  /* 하단 안내 */
+  #hint {
+    position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    padding: 8px 18px; font-size: 15px; font-weight: bold; text-align: center;
+    background: rgba(255, 255, 255, 0.82); border-radius: 999px; white-space: nowrap;
+  }
+  #toast {
+    position: absolute; left: 50%; top: 88px; transform: translate(-50%, -12px);
+    padding: 10px 22px; font-size: 18px; font-weight: bold;
+    background: #fff; border-radius: 999px; box-shadow: var(--shadow);
+    opacity: 0; transition: opacity 0.2s, transform 0.2s;
+  }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+  /* 조이스틱 */
+  #joy {
+    position: fixed; width: 124px; height: 124px; margin: -62px 0 0 -62px;
+    border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.75);
+    background: rgba(255, 255, 255, 0.22);
+    opacity: 0; transition: opacity 0.15s; pointer-events: none;
+  }
+  #joy.on { opacity: 1; }
+  #joy-knob {
+    position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
+    border-radius: 50%; background: rgba(255, 255, 255, 0.92); box-shadow: var(--shadow);
+  }
+
+  #loading {
+    position: fixed; inset: 0; display: grid; place-items: center; gap: 10px;
+    background: #d9ecfb; font-weight: bold; font-size: 18px; transition: opacity 0.4s;
+  }
+  #loading.hidden { opacity: 0; pointer-events: none; }
+
+  @media (max-width: 480px) {
+    .pill { font-size: 17px; padding: 6px 12px; }
+    #hp-bar { width: 128px; }
+    #hint { font-size: 13px; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="surface"></div>
+
+<div id="ui">
+  <div id="left">
+    <div id="hp-bar"><div id="hp-fill"></div></div>
+    <div id="carry-wrap" class="hidden"><span class="meat-dot"></span><span id="carry">0/10</span></div>
+    <div id="axe-lv">Lv.1</div>
+  </div>
+  <div id="money-pill" class="pill"><span class="bill"></span><span id="money">0</span></div>
+  <div id="toast"></div>
+  <div id="hint">사냥터로 이동하세요</div>
+</div>
+
+<div id="joy"><div id="joy-knob"></div></div>
+<div id="loading">설원을 준비하는 중...</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
