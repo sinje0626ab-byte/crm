@@ -1,39 +1,54 @@
-// 화면 위 DOM 오버레이(돈, 체력, 적재량, 안내 토스트).
+// 화면 위 DOM 오버레이(돈, 재고, 체력, 적재량, 안내, 토스트).
 export function createHud() {
   const el = {
     money: document.getElementById('money'),
+    moneyPill: document.getElementById('money-pill'),
+    wood: document.getElementById('stock-wood'),
+    meat: document.getElementById('stock-meat'),
     carry: document.getElementById('carry'),
     carryWrap: document.getElementById('carry-wrap'),
     hpFill: document.getElementById('hp-fill'),
-    axeLv: document.getElementById('axe-lv'),
+    sword: document.getElementById('sword-lv'),
     toast: document.getElementById('toast'),
     hint: document.getElementById('hint'),
+    damage: document.getElementById('damage-flash'),
   };
 
-  let shownMoney = 0;
   let toastTimer = 0;
+  let money = 0;
 
   return {
     setMoney(v) {
-      shownMoney = v;
+      money = v;
       el.money.textContent = Math.floor(v).toLocaleString('ko-KR');
     },
     bumpMoney() {
-      el.money.parentElement.classList.remove('bump');
-      void el.money.parentElement.offsetWidth; // 리플로우로 애니메이션 재시작
-      el.money.parentElement.classList.add('bump');
+      el.moneyPill.classList.remove('bump');
+      void el.moneyPill.offsetWidth;
+      el.moneyPill.classList.add('bump');
+    },
+    setStock(wood, meat) {
+      el.wood.textContent = wood;
+      el.meat.textContent = meat;
     },
     setCarry(n, cap) {
-      el.carry.textContent = `${n}/${cap}`;
-      el.carryWrap.classList.toggle('full', n >= cap);
+      const full = n >= cap;
+      el.carry.textContent = full ? 'FULL' : `${n}/${cap}`;
+      el.carryWrap.classList.toggle('full', full);
       el.carryWrap.classList.toggle('hidden', n === 0);
     },
     setHp(ratio) {
-      el.hpFill.style.width = `${Math.max(0, Math.min(1, ratio)) * 100}%`;
-      el.hpFill.style.background = ratio > 0.5 ? '#54d16a' : ratio > 0.25 ? '#ffd23f' : '#ff5a4e';
+      const r = Math.max(0, Math.min(1, ratio));
+      el.hpFill.style.width = `${r * 100}%`;
+      el.hpFill.style.background = r > 0.5 ? '#5fd07a' : r > 0.25 ? '#ffd23f' : '#ff5a4e';
     },
-    setAxeLevel(lv) {
-      el.axeLv.textContent = `Lv.${lv + 1}`;
+    setSwordLevel(lv) {
+      el.sword.textContent = `Lv.${lv + 1}`;
+    },
+    flashDamage() {
+      el.damage.classList.remove('on');
+      void el.damage.offsetWidth;
+      el.damage.classList.add('on');
     },
     toast(msg) {
       el.toast.textContent = msg;
@@ -41,7 +56,7 @@ export function createHud() {
       toastTimer = 2.4;
     },
     setHint(msg) {
-      el.hint.textContent = msg;
+      if (el.hint.textContent !== msg) el.hint.textContent = msg;
     },
     tick(dt) {
       if (toastTimer > 0) {
@@ -49,6 +64,6 @@ export function createHud() {
         if (toastTimer <= 0) el.toast.classList.remove('on');
       }
     },
-    get money() { return shownMoney; },
+    get money() { return money; },
   };
 }

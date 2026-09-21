@@ -3,113 +3,167 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-<meta name="theme-color" content="#d9ecfb" />
+<meta name="theme-color" content="#0d1620" />
 <title>화이트아웃 헌터</title>
 <style>
   :root {
-    --ink: #22303f;
-    --card: rgba(255, 255, 255, 0.92);
-    --shadow: 0 6px 0 rgba(28, 58, 88, 0.18);
+    --ink: #f2e9d8;
+    --panel: rgba(16, 24, 33, 0.88);
+    --panel-solid: #121b25;
+    --gold: #c9a24a;
+    --gold-soft: rgba(201, 162, 74, 0.45);
+    --shadow: 0 8px 22px rgba(0, 0, 0, 0.45);
   }
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   html, body {
-    margin: 0;
-    height: 100%;
-    overflow: hidden;
-    background: #d9ecfb;
+    margin: 0; height: 100%; overflow: hidden; background: #0d1620;
     font-family: "Trebuchet MS", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo",
                  "Noto Sans KR", system-ui, sans-serif;
-    color: var(--ink);
-    user-select: none;
-    touch-action: none;
+    color: var(--ink); user-select: none; touch-action: none;
   }
   #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   #surface { position: fixed; inset: 0; touch-action: none; }
-  #ui { position: fixed; inset: 0; pointer-events: none; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); }
+  .hidden { opacity: 0 !important; pointer-events: none !important; visibility: hidden !important; }
 
-  .pill {
-    position: absolute;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 14px;
-    background: var(--card);
-    border: 3px solid #fff;
-    border-radius: 999px;
+  /* ------------------------------------------------------------ 인게임 UI */
+  #ui { position: fixed; inset: 0; pointer-events: none; transition: opacity 0.3s; }
+  .panel {
+    background: var(--panel);
+    border: 2px solid var(--gold-soft);
+    border-radius: 14px;
     box-shadow: var(--shadow);
-    font-weight: bold;
-    font-size: 20px;
-    letter-spacing: 0.3px;
   }
 
-  /* 돈 */
-  #money-pill { top: 14px; right: 14px; transition: transform 0.12s ease; }
-  #money-pill.bump { transform: scale(1.12); }
-  .bill {
-    width: 30px; height: 20px; border-radius: 4px;
-    background: linear-gradient(#6fdc8a, #3fb264);
-    border: 2px solid #2d8e4d;
-    display: grid; place-items: center;
+  #top-left { position: absolute; top: 12px; left: 12px; display: flex; align-items: flex-start; gap: 10px; }
+  #btn-pause {
+    pointer-events: auto; width: 46px; height: 46px; display: grid; place-items: center;
+    font-size: 22px; color: var(--ink); cursor: pointer;
+    background: var(--panel); border: 2px solid var(--gold-soft); border-radius: 14px;
   }
-  .bill::after { content: ""; width: 9px; height: 9px; border-radius: 50%; background: #dff7e6; }
-
-  /* 체력 + 적재 */
-  #left { position: absolute; top: 14px; left: 14px; display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-  #hp-bar {
-    width: 160px; height: 18px; padding: 3px;
-    background: rgba(255, 255, 255, 0.9);
-    border: 3px solid #fff; border-radius: 999px; box-shadow: var(--shadow);
-  }
-  #hp-fill { height: 100%; width: 100%; border-radius: 999px; background: #54d16a; transition: width 0.15s linear, background 0.3s; }
+  #vitals { display: flex; flex-direction: column; gap: 7px; }
+  #hp-bar { width: 150px; height: 16px; padding: 3px; }
+  #hp-fill { height: 100%; width: 100%; border-radius: 6px; background: #5fd07a; transition: width 0.15s linear; }
   #carry-wrap {
-    display: flex; align-items: center; gap: 6px;
-    padding: 5px 12px; font-size: 16px; font-weight: bold;
-    background: var(--card); border: 3px solid #fff; border-radius: 999px; box-shadow: var(--shadow);
-    transition: opacity 0.2s, transform 0.2s;
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 11px;
+    font-size: 15px; font-weight: bold; transition: opacity 0.2s, transform 0.2s;
   }
-  #carry-wrap.hidden { opacity: 0; transform: translateY(-6px); }
-  #carry-wrap.full { color: #e0553f; }
-  .meat-dot { width: 18px; height: 12px; border-radius: 8px; background: #e2564d; border: 2px solid #b53f38; }
-  #axe-lv { font-size: 14px; opacity: 0.75; }
+  #carry-wrap.full { color: #ffcf5a; border-color: var(--gold); animation: pulse 0.8s infinite; }
+  @keyframes pulse { 50% { transform: scale(1.06); } }
+  .dot { width: 16px; height: 11px; border-radius: 7px; background: #c2453e; }
+  #sword-lv { display: inline-block; align-self: flex-start; padding: 3px 9px; font-size: 12px;
+    font-weight: bold; background: rgba(13, 22, 32, 0.7); border-radius: 999px; }
 
-  /* 하단 안내 */
+  #top-right { position: absolute; top: 12px; right: 12px; display: flex; gap: 8px; align-items: center; }
+  .chip {
+    display: flex; align-items: center; gap: 7px; padding: 7px 13px;
+    font-size: 17px; font-weight: bold; letter-spacing: 0.3px;
+  }
+  #money-pill { transition: transform 0.12s ease; font-size: 20px; }
+  #money-pill.bump { transform: scale(1.12); }
+  .ico { width: 22px; height: 16px; border-radius: 4px; }
+  .ico.cash { background: linear-gradient(#6fdc8a, #35a05c); border: 2px solid #2b7a48; }
+  .ico.wood { background: linear-gradient(#a3703f, #6d4a2c); border: 2px solid #4d3423; border-radius: 6px; }
+  .ico.meat { background: linear-gradient(#e0655c, #a83a34); border: 2px solid #7d2b26; border-radius: 8px; }
+
   #hint {
-    position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom));
-    transform: translateX(-50%);
-    padding: 8px 18px; font-size: 15px; font-weight: bold; text-align: center;
-    background: rgba(255, 255, 255, 0.82); border-radius: 999px; white-space: nowrap;
+    position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom));
+    transform: translateX(-50%); padding: 8px 18px; font-size: 14px; font-weight: bold;
+    text-align: center; white-space: nowrap; background: rgba(13, 22, 32, 0.72); border-radius: 999px;
   }
   #toast {
-    position: absolute; left: 50%; top: 88px; transform: translate(-50%, -12px);
-    padding: 10px 22px; font-size: 18px; font-weight: bold;
-    background: #fff; border-radius: 999px; box-shadow: var(--shadow);
-    opacity: 0; transition: opacity 0.2s, transform 0.2s;
+    position: absolute; left: 50%; top: 80px; transform: translate(-50%, -12px);
+    padding: 11px 24px; font-size: 17px; font-weight: bold;
+    background: var(--panel-solid); border: 2px solid var(--gold); border-radius: 999px;
+    box-shadow: var(--shadow); opacity: 0; transition: opacity 0.2s, transform 0.2s;
   }
   #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #vignette {
+    position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 45%, transparent 42%, rgba(8, 16, 26, 0.55) 100%);
+  }
+  #damage-flash {
+    position: absolute; inset: 0; pointer-events: none; opacity: 0;
+    background: radial-gradient(ellipse at center, transparent 45%, rgba(190, 40, 30, 0.55) 100%);
+  }
+  #damage-flash.on { animation: dmg 0.45s ease-out; }
+  @keyframes dmg { 0% { opacity: 1; } 100% { opacity: 0; } }
 
-  /* 조이스틱 */
+  /* --------------------------------------------------------------- 조이스틱 */
   #joy {
-    position: fixed; width: 124px; height: 124px; margin: -62px 0 0 -62px;
-    border-radius: 50%; border: 4px solid rgba(255, 255, 255, 0.75);
-    background: rgba(255, 255, 255, 0.22);
+    position: fixed; width: 126px; height: 126px; margin: -63px 0 0 -63px; border-radius: 50%;
+    border: 3px solid rgba(201, 162, 74, 0.5); background: rgba(13, 22, 32, 0.3);
     opacity: 0; transition: opacity 0.15s; pointer-events: none;
   }
   #joy.on { opacity: 1; }
   #joy-knob {
     position: absolute; left: 50%; top: 50%; width: 56px; height: 56px; margin: -28px 0 0 -28px;
-    border-radius: 50%; background: rgba(255, 255, 255, 0.92); box-shadow: var(--shadow);
+    border-radius: 50%; background: rgba(233, 226, 208, 0.9); box-shadow: var(--shadow);
   }
+
+  /* -------------------------------------------------------- 인트로 / 메뉴 */
+  #intro {
+    position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+    background: #070e15; transition: opacity 0.6s;
+  }
+  #intro.done { opacity: 0; pointer-events: none; }
+  #logo { text-align: center; }
+  #logo .mark {
+    font-size: clamp(46px, 13vw, 96px); font-weight: bold; letter-spacing: 0.16em;
+    color: #f4e7c6; text-shadow: 0 0 26px rgba(201, 162, 74, 0.55);
+    animation: logoIn 1.5s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  }
+  #logo .line {
+    height: 2px; margin: 16px auto 12px; background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    animation: lineIn 1.2s 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  }
+  #logo .sub { font-size: 13px; letter-spacing: 0.5em; opacity: 0; color: #c9b489;
+    animation: subIn 1s 0.9s ease both; }
+  @keyframes logoIn { from { opacity: 0; transform: scale(1.35); filter: blur(12px); } }
+  @keyframes lineIn { from { width: 0; } to { width: min(320px, 70vw); } }
+  @keyframes subIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 0.75; } }
+
+  #menu {
+    position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
+    background: linear-gradient(rgba(8, 15, 22, 0.55), rgba(8, 15, 22, 0.85));
+    transition: opacity 0.35s;
+  }
+  #menu-card { width: min(380px, 86vw); padding: 26px 22px; text-align: center; }
+  #menu h1 {
+    margin: 0 0 4px; font-size: clamp(26px, 7vw, 38px); letter-spacing: 0.04em;
+    text-shadow: 0 3px 0 rgba(0, 0, 0, 0.4);
+  }
+  #menu .en { margin: 0 0 20px; font-size: 12px; letter-spacing: 0.42em; opacity: 0.6; }
+  .btn {
+    pointer-events: auto; display: block; width: 100%; margin: 9px 0; padding: 14px;
+    font-size: 17px; font-weight: bold; font-family: inherit; color: #22190a; cursor: pointer;
+    background: linear-gradient(#f0d489, #c9a24a); border: none; border-bottom: 4px solid #8a6c2c;
+    border-radius: 12px; transition: transform 0.08s;
+  }
+  .btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+  .btn.ghost {
+    color: var(--ink); background: rgba(255, 255, 255, 0.06);
+    border: 2px solid var(--gold-soft); border-bottom-width: 2px;
+  }
+  .btn:disabled { opacity: 0.38; cursor: default; }
+  .note { margin-top: 12px; font-size: 12px; opacity: 0.6; }
+
+  #pause {
+    position: fixed; inset: 0; z-index: 25; display: grid; place-items: center;
+    background: rgba(6, 12, 18, 0.72); transition: opacity 0.2s;
+  }
+  #pause-card { width: min(340px, 84vw); padding: 22px; text-align: center; }
+  #pause h2 { margin: 0 0 14px; font-size: 22px; }
 
   #loading {
-    position: fixed; inset: 0; display: grid; place-items: center; gap: 10px;
-    background: #d9ecfb; font-weight: bold; font-size: 18px; transition: opacity 0.4s;
+    position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
+    background: #070e15; color: #c9a24a; font-weight: bold; transition: opacity 0.4s;
   }
-  #loading.hidden { opacity: 0; pointer-events: none; }
 
   @media (max-width: 480px) {
-    .pill { font-size: 17px; padding: 6px 12px; }
-    #hp-bar { width: 128px; }
-    #hint { font-size: 13px; }
+    .chip { font-size: 15px; padding: 6px 10px; }
+    #money-pill { font-size: 17px; }
+    #hp-bar { width: 118px; }
+    #hint { font-size: 12px; }
   }
 </style>
 <script type="importmap">
@@ -124,19 +178,59 @@
 <canvas id="scene"></canvas>
 <div id="surface"></div>
 
-<div id="ui">
-  <div id="left">
-    <div id="hp-bar"><div id="hp-fill"></div></div>
-    <div id="carry-wrap" class="hidden"><span class="meat-dot"></span><span id="carry">0/10</span></div>
-    <div id="axe-lv">Lv.1</div>
+<div id="ui" class="hidden">
+  <div id="top-left">
+    <div id="btn-pause">☰</div>
+    <div id="vitals">
+      <div id="hp-bar" class="panel"><div id="hp-fill"></div></div>
+      <div id="carry-wrap" class="panel hidden"><span class="dot"></span><span id="carry">0/10</span></div>
+      <div id="sword-lv">Lv.1</div>
+    </div>
   </div>
-  <div id="money-pill" class="pill"><span class="bill"></span><span id="money">0</span></div>
+
+  <div id="top-right">
+    <div class="chip panel"><span class="ico wood"></span><span id="stock-wood">0</span></div>
+    <div class="chip panel"><span class="ico meat"></span><span id="stock-meat">0</span></div>
+    <div id="money-pill" class="chip panel"><span class="ico cash"></span><span id="money">0</span></div>
+  </div>
+
   <div id="toast"></div>
-  <div id="hint">사냥터로 이동하세요</div>
+  <div id="hint">숲에서 나무를 베어 보세요</div>
+  <div id="vignette"></div>
+  <div id="damage-flash"></div>
 </div>
 
 <div id="joy"><div id="joy-knob"></div></div>
-<div id="loading">설원을 준비하는 중...</div>
+
+<div id="menu" class="hidden">
+  <div id="menu-card" class="panel">
+    <h1>화이트아웃 헌터</h1>
+    <p class="en">WHITEOUT HUNTER</p>
+    <button id="btn-continue" class="btn">이어하기</button>
+    <button id="btn-new" class="btn ghost">새 게임</button>
+    <p id="save-info" class="note">저장된 기록이 없습니다</p>
+  </div>
+</div>
+
+<div id="pause" class="hidden">
+  <div id="pause-card" class="panel">
+    <h2>일시정지</h2>
+    <button id="btn-resume" class="btn">계속하기</button>
+    <button id="btn-save" class="btn ghost">저장하기</button>
+    <button id="btn-quit" class="btn ghost">저장하고 메뉴로</button>
+    <p id="pause-save-info" class="note"></p>
+  </div>
+</div>
+
+<div id="intro">
+  <div id="logo">
+    <div class="mark">YJ GAMES</div>
+    <div class="line"></div>
+    <div class="sub">PRESENTS</div>
+  </div>
+</div>
+
+<div id="loading">불러오는 중...</div>
 
 <script type="module" src="./src/main.js"></script>
 </body>

@@ -14,74 +14,126 @@ export function mat(color, opts = {}) {
 function mesh(geo, color, opts) {
   const m = new THREE.Mesh(geo, mat(color, opts));
   m.castShadow = true;
-  m.receiveShadow = false;
   return m;
 }
 
-/* ---------------------------------------------------------------- 캐릭터 */
+/* ================================================================ 캐릭터 */
 
-function humanoid(coatColor, scale = 1) {
+// 어깨를 피벗 그룹으로 두어 팔을 휘두를 수 있게 만든다.
+function humanoid({ coat = COLORS.coat, scale = 1, hood = true } = {}) {
   const g = new THREE.Group();
 
-  const legs = mesh(new THREE.BoxGeometry(0.46, 0.42, 0.38), COLORS.woodDark);
-  legs.position.y = 0.22;
-  g.add(legs);
+  const boots = mesh(new THREE.BoxGeometry(0.5, 0.38, 0.42), COLORS.woodDark);
+  boots.position.y = 0.19;
+  g.add(boots);
 
-  const body = mesh(new THREE.CapsuleGeometry(0.36, 0.52, 3, 8), coatColor);
+  const body = mesh(new THREE.CapsuleGeometry(0.38, 0.56, 3, 8), coat);
   body.position.y = 0.92;
   g.add(body);
 
-  const collar = mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.16, 8), COLORS.fur);
-  collar.position.y = 1.33;
+  // 두꺼운 모피 깃
+  const collar = mesh(new THREE.CylinderGeometry(0.46, 0.44, 0.2, 9), COLORS.fur);
+  collar.position.y = 1.34;
   g.add(collar);
 
-  const head = mesh(new THREE.SphereGeometry(0.29, 8, 6), COLORS.skin);
+  const head = mesh(new THREE.SphereGeometry(0.28, 8, 6), COLORS.skin);
   head.position.y = 1.58;
   g.add(head);
 
-  const hat = mesh(new THREE.SphereGeometry(0.33, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.55), COLORS.fur);
-  hat.position.y = 1.62;
-  g.add(hat);
+  if (hood) {
+    const cap = mesh(new THREE.SphereGeometry(0.34, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.6), COLORS.fur);
+    cap.position.y = 1.6;
+    g.add(cap);
+  }
 
-  // 팔: 걷기 애니메이션에서 흔들 수 있도록 참조를 남겨둔다.
-  const armGeo = new THREE.CapsuleGeometry(0.13, 0.42, 3, 6);
-  const armL = mesh(armGeo, coatColor);
-  armL.position.set(-0.44, 0.98, 0);
-  const armR = mesh(armGeo, coatColor);
-  armR.position.set(0.44, 0.98, 0);
-  g.add(armL, armR);
+  const armGeo = new THREE.CapsuleGeometry(0.13, 0.44, 3, 6);
+  const shoulders = {};
+  for (const side of ['L', 'R']) {
+    const pivot = new THREE.Group();
+    pivot.position.set(side === 'L' ? -0.44 : 0.44, 1.2, 0);
+    const arm = mesh(armGeo, coat);
+    arm.position.y = -0.3;
+    pivot.add(arm);
+    g.add(pivot);
+    shoulders[side] = pivot;
+  }
 
   g.scale.setScalar(scale);
-  g.userData.parts = { legs, body, armL, armR, head };
+  g.userData.parts = { body, boots, head, shoulderL: shoulders.L, shoulderR: shoulders.R };
   return g;
 }
 
 export function makePlayer() {
-  const g = humanoid(COLORS.coat, 1.22);
-  const carry = new THREE.Group(); // 머리 위 고기 더미
-  carry.position.y = 1.95;
+  const g = humanoid({ coat: COLORS.coat, scale: 1.24 });
+
+  // 오른손에 검을 쥐여준다
+  const sword = makeSword();
+  sword.position.set(0, -0.5, 0.14);
+  sword.rotation.x = -0.22;   // 손에서 위로 세워 든 자세
+  g.userData.parts.shoulderR.add(sword);
+  g.userData.sword = sword;
+
+  const carry = new THREE.Group(); // 머리 위로 쌓이는 짐
+  carry.position.y = 1.9;
   g.add(carry);
   g.userData.carry = carry;
   return g;
 }
 
 export function makeWorker() {
-  return humanoid(0xe0703a, 0.92);
+  return humanoid({ coat: COLORS.coatAlt, scale: 1.02 });
 }
 
 export function makeArcherFigure() {
-  return humanoid(0x6b57c8, 0.88);
+  return humanoid({ coat: 0x4c5e8a, scale: 0.95 });
 }
 
-/* -------------------------------------------------------------------- 곰 */
+const BUYER_COATS = [0x8c5a7a, 0x5d7a4a, 0x8a7440, 0x4a6f7a, 0x7a5442];
+export function makeBuyer(i) {
+  return humanoid({ coat: BUYER_COATS[i % BUYER_COATS.length], scale: 1.02 });
+}
+
+export function makeSword() {
+  const g = new THREE.Group();
+  const grip = mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.34, 6), COLORS.woodDark);
+  g.add(grip);
+  const guard = mesh(new THREE.BoxGeometry(0.44, 0.09, 0.12), COLORS.gold);
+  guard.position.y = 0.2;
+  g.add(guard);
+  const blade = mesh(new THREE.BoxGeometry(0.16, 1.25, 0.07), COLORS.steel);
+  blade.position.y = 0.87;
+  g.add(blade);
+  const tip = mesh(new THREE.ConeGeometry(0.11, 0.26, 4), COLORS.steel);
+  tip.position.y = 1.6;
+  g.add(tip);
+  return g;
+}
+
+// 검이 지나간 자리에 남는 반달 궤적
+export function makeSwingTrail() {
+  const shape = new THREE.RingGeometry(1.6, 3.4, 16, 1, -0.7, 1.4);
+  const m = new THREE.Mesh(shape, new THREE.MeshBasicMaterial({
+    color: 0xdcefff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+  }));
+  m.rotation.x = -Math.PI / 2;
+  m.position.y = 1.1;
+  return m;
+}
+
+/* ==================================================================== 곰 */
 
 export function makeBear() {
   const g = new THREE.Group();
 
   const body = mesh(new THREE.CapsuleGeometry(0.72, 1.5, 4, 8), COLORS.bear);
-  body.rotation.x = Math.PI / 2;   // 몸통 축을 진행 방향(+Z)에 맞춘다
+  body.rotation.x = Math.PI / 2;
   body.position.y = 1.18;
   g.add(body);
+
+  const hump = mesh(new THREE.SphereGeometry(0.5, 7, 5), COLORS.bear);
+  hump.scale.set(1, 0.6, 1.2);
+  hump.position.set(0, 1.62, 0.35);
+  g.add(hump);
 
   const head = mesh(new THREE.SphereGeometry(0.56, 8, 6), COLORS.bear);
   head.position.set(0, 1.34, 1.28);
@@ -91,14 +143,14 @@ export function makeBear() {
   snout.position.set(0, 1.16, 1.72);
   g.add(snout);
 
-  const nose = mesh(new THREE.BoxGeometry(0.16, 0.14, 0.12), 0x3a3a3a);
+  const nose = mesh(new THREE.BoxGeometry(0.16, 0.14, 0.12), 0x30363d);
   nose.position.set(0, 1.22, 1.94);
   g.add(nose);
 
   const earGeo = new THREE.SphereGeometry(0.16, 6, 5);
-  for (const s2 of [-1, 1]) {
+  for (const s of [-1, 1]) {
     const ear = mesh(earGeo, COLORS.bearShade);
-    ear.position.set(0.33 * s2, 1.76, 1.08);
+    ear.position.set(0.33 * s, 1.76, 1.08);
     g.add(ear);
   }
 
@@ -113,11 +165,6 @@ export function makeBear() {
     }
   }
 
-  const hump = mesh(new THREE.SphereGeometry(0.5, 7, 5), COLORS.bear);
-  hump.scale.set(1, 0.6, 1.2);
-  hump.position.set(0, 1.62, 0.35);
-  g.add(hump);
-
   const tail = mesh(new THREE.SphereGeometry(0.19, 6, 5), COLORS.bear);
   tail.position.set(0, 1.25, -1.45);
   g.add(tail);
@@ -127,18 +174,17 @@ export function makeBear() {
   return g;
 }
 
-/* --------------------------------------------------------------- HP 바 */
+/* ============================================================== 체력 바 */
 
-const hpBarGeo = new THREE.PlaneGeometry(1, 1);
-export function makeHpBar(width = 1.6, height = 0.2) {
+const barGeo = new THREE.PlaneGeometry(1, 1);
+export function makeHpBar(width = 1.7, height = 0.2) {
   const group = new THREE.Group();
-  const bg = new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0x1b2430 }));
+  const bg = new THREE.Mesh(barGeo, new THREE.MeshBasicMaterial({ color: 0x17202b }));
   bg.scale.set(width, height, 1);
-  const fill = new THREE.Mesh(hpBarGeo, new THREE.MeshBasicMaterial({ color: 0x54d16a }));
+  const fill = new THREE.Mesh(barGeo, new THREE.MeshBasicMaterial({ color: 0x5fd07a }));
   fill.scale.set(width - 0.06, height - 0.06, 1);
   fill.position.z = 0.01;
   group.add(bg, fill);
-
   const inner = width - 0.06;
   return {
     group,
@@ -146,12 +192,12 @@ export function makeHpBar(width = 1.6, height = 0.2) {
       const v = Math.max(0, Math.min(1, r));
       fill.scale.x = inner * v;
       fill.position.x = -(inner * (1 - v)) / 2;
-      fill.material.color.setHex(v > 0.5 ? 0x54d16a : v > 0.25 ? 0xffd23f : 0xff5a4e);
+      fill.material.color.setHex(v > 0.5 ? 0x5fd07a : v > 0.25 ? 0xffd23f : 0xff5a4e);
     },
   };
 }
 
-/* ------------------------------------------------------------ 아이템/무기 */
+/* ============================================================ 자원/아이템 */
 
 export function makeMeat() {
   const g = new THREE.Group();
@@ -165,16 +211,17 @@ export function makeMeat() {
   return g;
 }
 
-export function makeAxe() {
+export function makeLog(len = 0.95) {
   const g = new THREE.Group();
-  const handle = mesh(new THREE.CylinderGeometry(0.055, 0.055, 1.15, 6), COLORS.wood);
-  handle.rotation.z = Math.PI / 2;
-  g.add(handle);
-  const blade = mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.09, 6, 1, false, 0, Math.PI), COLORS.steel);
-  blade.rotation.x = Math.PI / 2;
-  blade.rotation.z = -Math.PI / 2;
-  blade.position.x = 0.55;
-  g.add(blade);
+  const body = mesh(new THREE.CylinderGeometry(0.17, 0.17, len, 7), COLORS.wood);
+  body.rotation.z = Math.PI / 2;   // 그룹 안에서 눕혀 두면 바깥 회전에 영향받지 않는다
+  g.add(body);
+  for (const s2 of [-1, 1]) {
+    const ring = mesh(new THREE.CylinderGeometry(0.175, 0.175, 0.06, 7), COLORS.trunk);
+    ring.rotation.z = Math.PI / 2;
+    ring.position.x = (len / 2 - 0.03) * s2;
+    g.add(ring);
+  }
   return g;
 }
 
@@ -197,28 +244,186 @@ export function makeArrow() {
   return g;
 }
 
-/* --------------------------------------------------------------- 건물/지형 */
+/* ================================================================== 나무 */
 
-export function makeGrill() {
+// 벨 수 있는 나무. 눈을 인 전나무 모양.
+export function makeChoppableTree(scale = 1) {
   const g = new THREE.Group();
-  const stones = mesh(new THREE.CylinderGeometry(1.15, 1.35, 0.5, 7), 0x9aa4ae);
-  stones.position.y = 0.25;
-  g.add(stones);
+  const trunk = mesh(new THREE.CylinderGeometry(0.26, 0.34, 1.5, 6), COLORS.trunk);
+  trunk.position.y = 0.75;
+  g.add(trunk);
 
-  const fire = mesh(new THREE.ConeGeometry(0.5, 0.8, 6), COLORS.fire, { emissive: 0xff7a18, emissiveIntensity: 0.6 });
-  fire.position.y = 0.72;
+  const canopy = new THREE.Group();
+  const tiers = [
+    { y: 2.0, r: 1.5, h: 2.2, c: COLORS.pineDeep },
+    { y: 3.3, r: 1.0, h: 1.8, c: COLORS.pine },
+  ];
+  for (const t of tiers) {
+    const cone = mesh(new THREE.ConeGeometry(t.r, t.h, 7), t.c);
+    cone.position.y = t.y;
+    canopy.add(cone);
+    const snow = mesh(new THREE.ConeGeometry(t.r * 0.84, t.h * 0.4, 7), COLORS.pineSnow);
+    snow.position.y = t.y + t.h * 0.3;
+    snow.castShadow = false;
+    canopy.add(snow);
+  }
+  g.add(canopy);
+  g.scale.setScalar(scale);
+  g.userData.parts = { trunk, canopy };
+  return g;
+}
+
+export function makeStump() {
+  const g = mesh(new THREE.CylinderGeometry(0.34, 0.38, 0.4, 6), COLORS.trunk);
+  const top = mesh(new THREE.CylinderGeometry(0.35, 0.35, 0.06, 6), COLORS.plank);
+  top.position.y = 0.21;
+  g.add(top);
+  g.position.y = 0.2;
+  return g;
+}
+
+/* ================================================================== 건물 */
+
+// WOS의 상징인 중앙 화로: 돌 기단 + 무쇠 몸통 + 굴뚝 + 불빛
+export function makeFurnace() {
+  const g = new THREE.Group();
+
+  const base = mesh(new THREE.CylinderGeometry(2.4, 2.8, 0.7, 8), COLORS.stoneDark);
+  base.position.y = 0.35;
+  base.receiveShadow = true;
+  g.add(base);
+
+  const bodyM = mesh(new THREE.CylinderGeometry(1.7, 2.1, 2.4, 8), COLORS.stone);
+  bodyM.position.y = 1.85;
+  g.add(bodyM);
+
+  const band = mesh(new THREE.TorusGeometry(1.85, 0.12, 4, 12), COLORS.steel);
+  band.rotation.x = Math.PI / 2;
+  band.position.y = 1.7;
+  g.add(band);
+
+  // 아궁이 입구와 불꽃
+  const mouth = mesh(new THREE.BoxGeometry(1.5, 1.0, 0.3), 0x2a2f36);
+  mouth.position.set(0, 1.2, 1.95);
+  g.add(mouth);
+  const fire = mesh(new THREE.ConeGeometry(0.55, 1.0, 6), COLORS.fire, { emissive: 0xff6a10 });
+  fire.position.set(0, 1.15, 1.95);
+  fire.rotation.x = Math.PI / 2.4;
   g.add(fire);
 
-  const pot = mesh(new THREE.CylinderGeometry(0.8, 0.5, 1.05, 8), 0xc9d2da);
-  pot.position.y = 1.15;
-  g.add(pot);
+  const chimney = mesh(new THREE.CylinderGeometry(0.6, 0.75, 1.8, 7), COLORS.stoneDark);
+  chimney.position.y = 3.6;
+  g.add(chimney);
+  const cap = mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.16, 7), COLORS.steel);
+  cap.position.y = 4.5;
+  g.add(cap);
 
-  const rim = mesh(new THREE.TorusGeometry(0.8, 0.08, 4, 10), COLORS.wood);
-  rim.rotation.x = Math.PI / 2;
-  rim.position.y = 1.66;
-  g.add(rim);
+  const glow = new THREE.PointLight(0xff9b3d, 2.4, 22, 2);
+  glow.position.set(0, 1.6, 1.6);
+  g.add(glow);
 
   g.userData.fire = fire;
+  g.userData.glow = glow;
+  return g;
+}
+
+// 판매대: 나무 카운터 + 차양 + 재고를 올려두는 자리
+export function makeStall() {
+  const g = new THREE.Group();
+
+  const counter = mesh(new THREE.BoxGeometry(4.6, 1.0, 1.5), COLORS.plank);
+  counter.position.y = 0.5;
+  g.add(counter);
+  const top = mesh(new THREE.BoxGeometry(5.0, 0.16, 1.9), COLORS.wood);
+  top.position.y = 1.06;
+  g.add(top);
+
+  const postGeo = new THREE.BoxGeometry(0.2, 3.0, 0.2);
+  for (const x of [-2.4, 2.4]) {
+    const p = mesh(postGeo, COLORS.woodDark);
+    p.position.set(x, 1.5, -0.9);
+    g.add(p);
+  }
+
+  // 뒤쪽 간판(위에서 내려다봐도 카운터 위 재고가 보이도록 지붕은 두지 않는다)
+  const board = mesh(new THREE.BoxGeometry(5.0, 1.1, 0.18), COLORS.canvas);
+  board.position.set(0, 2.5, -0.9);
+  g.add(board);
+  const boardSnow = mesh(new THREE.BoxGeometry(5.1, 0.16, 0.34), COLORS.roof);
+  boardSnow.position.set(0, 3.08, -0.9);
+  g.add(boardSnow);
+
+  const stock = new THREE.Group(); // 재고 더미가 올라갈 자리
+  stock.position.set(0, 1.16, 0);
+  g.add(stock);
+  g.userData.stock = stock;
+  return g;
+}
+
+export function makeHut(w = 4, d = 3.4, h = 2.2) {
+  const g = new THREE.Group();
+  const walls = mesh(new THREE.BoxGeometry(w, h, d), COLORS.wood);
+  walls.position.y = h / 2;
+  walls.receiveShadow = true;
+  g.add(walls);
+
+  const roof = mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.78, 1.5, 4), COLORS.woodDark);
+  roof.position.y = h + 0.7;
+  roof.rotation.y = Math.PI / 4;
+  g.add(roof);
+
+  const snow = mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.72, 0.9, 4), COLORS.roof);
+  snow.position.y = h + 1.1;
+  snow.rotation.y = Math.PI / 4;
+  g.add(snow);
+
+  const door = mesh(new THREE.BoxGeometry(0.9, 1.3, 0.12), COLORS.woodDark);
+  door.position.set(0, 0.65, d / 2 + 0.02);
+  g.add(door);
+  return g;
+}
+
+export function makeTent() {
+  const g = new THREE.Group();
+  const body = mesh(new THREE.ConeGeometry(1.7, 2.6, 5), COLORS.canvas);
+  body.position.y = 1.3;
+  g.add(body);
+  const snow = mesh(new THREE.ConeGeometry(1.45, 1.1, 5), COLORS.roof);
+  snow.position.y = 2.0;
+  g.add(snow);
+  return g;
+}
+
+export function makeTorch(withLight = true) {
+  const g = new THREE.Group();
+  const post = mesh(new THREE.CylinderGeometry(0.1, 0.13, 2.2, 5), COLORS.woodDark);
+  post.position.y = 1.1;
+  g.add(post);
+  const bowl = mesh(new THREE.CylinderGeometry(0.3, 0.18, 0.3, 6), COLORS.steel);
+  bowl.position.y = 2.3;
+  g.add(bowl);
+  const flame = mesh(new THREE.ConeGeometry(0.22, 0.5, 5), COLORS.ember, { emissive: 0xff8a2b });
+  flame.position.y = 2.65;
+  g.add(flame);
+  if (withLight) {
+    const light = new THREE.PointLight(0xffa64d, 1.1, 11, 2);
+    light.position.y = 2.7;
+    g.add(light);
+    g.userData.light = light;
+  }
+  g.userData.flame = flame;
+  return g;
+}
+
+export function makeBarrel() {
+  const g = mesh(new THREE.CylinderGeometry(0.42, 0.42, 1.0, 8), COLORS.wood);
+  g.position.y = 0.5;
+  const b1 = mesh(new THREE.TorusGeometry(0.44, 0.05, 4, 10), COLORS.steel);
+  b1.rotation.x = Math.PI / 2;
+  b1.position.y = 0.25;
+  const b2 = b1.clone();
+  b2.position.y = -0.25;
+  g.add(b1, b2);
   return g;
 }
 
@@ -236,72 +441,90 @@ export function makeLogStack(rows = 4, cols = 5) {
   return g;
 }
 
-export function makeFence(w, d, height = 1.1, gapHalf = 0) {
+// 울타리는 말뚝이 수백 개라 인스턴싱으로 두 번의 드로우콜에 그린다.
+export function makeFence(w, d, height = 1.2, gapHalf = 0) {
   const g = new THREE.Group();
-  const picket = new THREE.BoxGeometry(0.26, height, 0.14);
-  const step = 0.62;
-  const add = (x, z, rotY) => {
-    const p = mesh(picket, COLORS.fence);
-    p.position.set(x, height / 2, z);
-    p.rotation.y = rotY;
-    g.add(p);
-  };
+  const step = 0.66;
+  const spots = [];
   for (let x = -w / 2; x <= w / 2; x += step) {
-    add(x, -d / 2, 0);
-    add(x, d / 2, 0);
+    spots.push([x, -d / 2, 0]);
+    spots.push([x, d / 2, 0]);
   }
   for (let z = -d / 2; z <= d / 2; z += step) {
-    add(-w / 2, z, Math.PI / 2);
-    if (Math.abs(z) > gapHalf) add(w / 2, z, Math.PI / 2); // 오른쪽은 문만큼 비운다
+    spots.push([-w / 2, z, Math.PI / 2]);
+    if (Math.abs(z) > gapHalf) spots.push([w / 2, z, Math.PI / 2]);
   }
+
+  const pickets = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.3, height, 0.16), mat(COLORS.woodDark), spots.length);
+  const caps = new THREE.InstancedMesh(
+    new THREE.BoxGeometry(0.34, 0.1, 0.2), mat(COLORS.roof), spots.length);
+  pickets.castShadow = true;
+
+  const m4 = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  const v = new THREE.Vector3();
+  const one = new THREE.Vector3(1, 1, 1);
+  spots.forEach(([x, z, ry], i) => {
+    q.setFromAxisAngle(up, ry);
+    v.set(x, height / 2, z);
+    pickets.setMatrixAt(i, m4.compose(v, q, one));
+    v.set(x, height, z);
+    caps.setMatrixAt(i, m4.compose(v, q, one));
+  });
+  g.add(pickets, caps);
   return g;
 }
 
 export function makeArcherTower() {
   const g = new THREE.Group();
-  const deck = mesh(new THREE.BoxGeometry(2.1, 0.5, 2.1), COLORS.wood);
-  deck.position.y = 1.5;
-  g.add(deck);
-  const legGeo = new THREE.BoxGeometry(0.22, 1.6, 0.22);
-  for (const x of [-0.8, 0.8]) {
-    for (const z of [-0.8, 0.8]) {
+  const legGeo = new THREE.BoxGeometry(0.24, 2.2, 0.24);
+  for (const x of [-0.85, 0.85]) {
+    for (const z of [-0.85, 0.85]) {
       const leg = mesh(legGeo, COLORS.woodDark);
-      leg.position.set(x, 0.8, z);
+      leg.position.set(x, 1.1, z);
       g.add(leg);
     }
   }
+  const deck = mesh(new THREE.BoxGeometry(2.3, 0.35, 2.3), COLORS.plank);
+  deck.position.y = 2.3;
+  g.add(deck);
+  const rail = mesh(new THREE.BoxGeometry(2.3, 0.5, 0.16), COLORS.woodDark);
+  rail.position.set(0, 2.7, -1.05);
+  g.add(rail);
   const archer = makeArcherFigure();
-  archer.position.y = 1.75;
+  archer.position.y = 2.48;
   g.add(archer);
   g.userData.archer = archer;
   return g;
 }
 
-/* ------------------------------------------------------- 구매 패드 & 라벨 */
+/* ============================================================ 구매 패드 */
 
-export function makePad(w, d, color = 0x46403b) {
+export function makePad(w, d) {
   const g = new THREE.Group();
 
   const border = new THREE.Mesh(
     new THREE.BoxGeometry(w + 0.5, 0.05, d + 0.5),
-    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 })
+    new THREE.MeshBasicMaterial({ color: COLORS.gold, transparent: true, opacity: 0.55 })
   );
   border.position.y = 0.02;
   g.add(border);
+
   const slab = new THREE.Mesh(
     new THREE.BoxGeometry(w, 0.08, d),
-    new THREE.MeshLambertMaterial({ color, transparent: true, opacity: 0.92 })
+    new THREE.MeshLambertMaterial({ color: 0x2c333d, transparent: true, opacity: 0.94 })
   );
-  slab.position.y = 0.04;
+  slab.position.y = 0.05;
   slab.receiveShadow = true;
   g.add(slab);
 
-  // 진행도 표시: 패드 위에 차오르는 밝은 판
   const fill = new THREE.Mesh(
     new THREE.BoxGeometry(w - 0.2, 0.06, d - 0.2),
-    new THREE.MeshBasicMaterial({ color: 0x7ce08a, transparent: true, opacity: 0.55 })
+    new THREE.MeshBasicMaterial({ color: 0x7ce08a, transparent: true, opacity: 0.6 })
   );
-  fill.position.y = 0.1;
+  fill.position.y = 0.11;
   fill.scale.z = 0.001;
   g.add(fill);
 
@@ -310,12 +533,13 @@ export function makePad(w, d, color = 0x46403b) {
   return g;
 }
 
-// 캔버스로 그린 아이콘 + 가격 라벨(이모지 폰트에 의존하지 않도록 직접 그린다).
+/* ============================================================= 월드 라벨 */
+
 function drawIcon(ctx, type, cx, cy, s) {
   ctx.save();
   ctx.translate(cx, cy);
-  ctx.strokeStyle = '#2b3440';
-  ctx.fillStyle = '#2b3440';
+  ctx.strokeStyle = '#f2e6c8';
+  ctx.fillStyle = '#f2e6c8';
   ctx.lineWidth = s * 0.14;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -332,16 +556,15 @@ function drawIcon(ctx, type, cx, cy, s) {
     ctx.moveTo(-s * 0.45, 0);
     ctx.lineTo(s * 0.45, 0);
     ctx.stroke();
-  } else if (type === 'axe') {
+  } else if (type === 'sword') {
     ctx.beginPath();
-    ctx.moveTo(-s * 0.4, s * 0.45);
-    ctx.lineTo(s * 0.25, -s * 0.3);
+    ctx.moveTo(-s * 0.35, s * 0.42);
+    ctx.lineTo(s * 0.42, -s * 0.45);
     ctx.stroke();
     ctx.beginPath();
-    ctx.moveTo(s * 0.05, -s * 0.5);
-    ctx.quadraticCurveTo(s * 0.62, -s * 0.5, s * 0.5, s * 0.08);
-    ctx.quadraticCurveTo(s * 0.2, -s * 0.05, s * 0.05, -s * 0.5);
-    ctx.fill();
+    ctx.moveTo(-s * 0.42, s * 0.05);
+    ctx.lineTo(-s * 0.02, s * 0.45);
+    ctx.stroke();
   } else if (type === 'worker') {
     ctx.beginPath();
     ctx.arc(0, -s * 0.22, s * 0.22, 0, Math.PI * 2);
@@ -350,6 +573,13 @@ function drawIcon(ctx, type, cx, cy, s) {
     ctx.moveTo(-s * 0.38, s * 0.45);
     ctx.quadraticCurveTo(0, -s * 0.12, s * 0.38, s * 0.45);
     ctx.fill();
+  } else if (type === 'bag') {
+    ctx.beginPath();
+    ctx.roundRect(-s * 0.38, -s * 0.2, s * 0.76, s * 0.62, s * 0.12);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, -s * 0.2, s * 0.22, Math.PI, 0);
+    ctx.stroke();
   } else if (type === 'cash') {
     ctx.beginPath();
     ctx.roundRect(-s * 0.48, -s * 0.3, s * 0.96, s * 0.6, s * 0.1);
@@ -357,6 +587,13 @@ function drawIcon(ctx, type, cx, cy, s) {
     ctx.beginPath();
     ctx.arc(0, 0, s * 0.16, 0, Math.PI * 2);
     ctx.fill();
+  } else if (type === 'wood') {
+    ctx.beginPath();
+    ctx.roundRect(-s * 0.45, -s * 0.26, s * 0.9, s * 0.24, s * 0.1);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.roundRect(-s * 0.45, s * 0.06, s * 0.9, s * 0.24, s * 0.1);
+    ctx.stroke();
   } else if (type === 'meat') {
     ctx.beginPath();
     ctx.ellipse(s * 0.05, 0, s * 0.42, s * 0.3, 0, 0, Math.PI * 2);
@@ -368,7 +605,8 @@ function drawIcon(ctx, type, cx, cy, s) {
   ctx.restore();
 }
 
-export function makeLabel(iconType, text, width = 2.6) {
+// 어두운 목재 패널 + 금색 테두리의 월드 라벨
+export function makeLabel(iconType, text, width = 3.1) {
   const canvas = document.createElement('canvas');
   canvas.width = 320;
   canvas.height = 160;
@@ -381,37 +619,29 @@ export function makeLabel(iconType, text, width = 2.6) {
   );
   sprite.scale.set(width, width * 0.5, 1);
 
-  function render(label, dim = false) {
+  function render(label) {
     ctx.clearRect(0, 0, 320, 160);
-    ctx.globalAlpha = dim ? 0.45 : 1;
-    // 둥근 말풍선 배경
-    ctx.fillStyle = '#ffffff';
-    ctx.strokeStyle = '#cfdae6';
+    ctx.fillStyle = 'rgba(26, 33, 43, 0.94)';
+    ctx.strokeStyle = '#c9a24a';
     ctx.lineWidth = 6;
-    const r = 44;
+    const r = 40;
     ctx.beginPath();
-    ctx.moveTo(24 + r, 22);
-    ctx.arcTo(296, 22, 296, 138, r);
-    ctx.arcTo(296, 138, 24, 138, r);
-    ctx.arcTo(24, 138, 24, 22, r);
-    ctx.arcTo(24, 22, 296, 22, r);
-    ctx.closePath();
+    ctx.roundRect(22, 22, 276, 116, r);
     ctx.fill();
     ctx.stroke();
 
-    drawIcon(ctx, iconType, 92, 80, 54);
+    drawIcon(ctx, iconType, 84, 80, 52);
 
-    ctx.fillStyle = '#2b3440';
+    ctx.fillStyle = '#f7efdc';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    let size = 54;
-    const avail = 274 - 142;
+    let size = 52;
+    const avail = 276 - 116;
     do {
       ctx.font = `bold ${size}px "Trebuchet MS", system-ui, sans-serif`;
       size -= 3;
-    } while (ctx.measureText(label).width > avail && size > 26);
-    ctx.fillText(label, 142, 84);
-    ctx.globalAlpha = 1;
+    } while (ctx.measureText(label).width > avail && size > 24);
+    ctx.fillText(label, 136, 82);
     tex.needsUpdate = true;
   }
 
