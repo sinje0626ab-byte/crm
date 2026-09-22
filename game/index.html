@@ -35,11 +35,16 @@
   }
 
   #top-left { position: absolute; top: 12px; left: 12px; display: flex; align-items: flex-start; gap: 10px; }
-  #btn-pause {
+  #btn-pause, #btn-mute {
     pointer-events: auto; width: 46px; height: 46px; display: grid; place-items: center;
     font-size: 22px; color: var(--ink); cursor: pointer;
     background: var(--panel); border: 2px solid var(--gold-soft); border-radius: 14px;
   }
+  #btn-mute svg { width: 22px; height: 22px; fill: currentColor; }
+  #btn-mute .off { display: none; }
+  #btn-mute.muted { color: #8d97a3; }
+  #btn-mute.muted .on { display: none; }
+  #btn-mute.muted .off { display: block; }
   #vitals { display: flex; flex-direction: column; gap: 7px; }
   #hp-bar { width: 150px; height: 16px; padding: 3px; }
   #hp-fill { height: 100%; width: 100%; border-radius: 6px; background: #5fd07a; transition: width 0.15s linear; }
@@ -101,26 +106,24 @@
   }
 
   /* -------------------------------------------------------- 인트로 / 메뉴 */
+  /* 퍼블리셔 로고 오프닝 — 언데드러쉬와 같은 스플래시 */
   #intro {
     position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
-    background: #070e15; transition: opacity 0.6s;
+    background: #000; cursor: pointer; transition: opacity 0.6s;
   }
   #intro.done { opacity: 0; pointer-events: none; }
-  #logo { text-align: center; }
-  #logo .mark {
-    font-size: clamp(46px, 13vw, 96px); font-weight: bold; letter-spacing: 0.16em;
-    color: #f4e7c6; text-shadow: 0 0 26px rgba(201, 162, 74, 0.55);
-    animation: logoIn 1.5s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  .splash-logo {
+    width: min(420px, 86vw); height: auto; opacity: 1;
+    animation: splashIn 2.6s ease forwards;
   }
-  #logo .line {
-    height: 2px; margin: 16px auto 12px; background: linear-gradient(90deg, transparent, var(--gold), transparent);
-    animation: lineIn 1.2s 0.5s cubic-bezier(0.2, 0.9, 0.2, 1) both;
+  @keyframes splashIn {
+    0% { opacity: 0; transform: scale(0.86); }
+    14% { opacity: 1; transform: scale(1); }
+    78% { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(1.02); }
   }
-  #logo .sub { font-size: 13px; letter-spacing: 0.5em; opacity: 0; color: #c9b489;
-    animation: subIn 1s 0.9s ease both; }
-  @keyframes logoIn { from { opacity: 0; transform: scale(1.35); filter: blur(12px); } }
-  @keyframes lineIn { from { width: 0; } to { width: min(320px, 70vw); } }
-  @keyframes subIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 0.75; } }
+  /* 애니메이션을 줄이는 기기에서도 로고가 보이도록 */
+  @media (prefers-reduced-motion: reduce) { .splash-logo { animation: none; opacity: 1; } }
 
   #menu {
     position: fixed; inset: 0; z-index: 20; display: grid; place-items: center;
@@ -181,6 +184,10 @@
 <div id="ui" class="hidden">
   <div id="top-left">
     <div id="btn-pause">☰</div>
+    <div id="btn-mute" title="소리">
+      <svg class="on" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zm12.5 3a4.5 4.5 0 0 0-2.5-4v8a4.5 4.5 0 0 0 2.5-4zM14 2.2v2.1c3 .9 5 3.5 5 6.7s-2 5.8-5 6.7v2.1c4.1-1 7-4.5 7-8.8s-2.9-7.8-7-8.8z"/></svg>
+      <svg class="off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4zm15.5 3 2.5-2.5-1.4-1.4L18 10.6 15.4 8 14 9.4l2.6 2.6L14 14.6l1.4 1.4 2.6-2.6 2.6 2.6 1.4-1.4L19.5 12z"/></svg>
+    </div>
     <div id="vitals">
       <div id="hp-bar" class="panel"><div id="hp-fill"></div></div>
       <div id="carry-wrap" class="panel hidden"><span class="dot"></span><span id="carry">0/10</span></div>
@@ -217,17 +224,14 @@
     <h2>일시정지</h2>
     <button id="btn-resume" class="btn">계속하기</button>
     <button id="btn-save" class="btn ghost">저장하기</button>
+    <button id="btn-sound" class="btn ghost">소리 끄기</button>
     <button id="btn-quit" class="btn ghost">저장하고 메뉴로</button>
     <p id="pause-save-info" class="note"></p>
   </div>
 </div>
 
 <div id="intro">
-  <div id="logo">
-    <div class="mark">YJ GAMES</div>
-    <div class="line"></div>
-    <div class="sub">PRESENTS</div>
-  </div>
+  <img class="splash-logo" src="./assets/yj-games.webp" alt="YJ GAMES" />
 </div>
 
 <div id="loading">불러오는 중...</div>

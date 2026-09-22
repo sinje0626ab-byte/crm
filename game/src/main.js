@@ -6,6 +6,7 @@ import { createInput } from './input.js';
 import { createHud } from './hud.js';
 import { createMenu } from './menu.js';
 import { loadSave, writeSave, clearSave } from './save.js';
+import { Audio } from './audio.js';
 import {
   makePlayer, makeWorker, makeBear, makeHpBar, makeMeat, makeLog, makeCashBill,
   makeArrow, makeFurnace, makeStall, makeArcherTower, makePad, makeLabel,
@@ -238,10 +239,12 @@ function plantTrees() {
 function chopTree(t) {
   t.hp--;
   t.shake = 0.25;
+  Audio.S.chop();
   if (t.hp <= 0) {
     t.alive = false;
     t.fall = 0.6;
     t.stump.visible = true;
+    Audio.S.treeFall();
     for (let i = 0; i < CFG.tree.logs; i++) spawnPickup('wood', t.x, t.z, 1.4);
   }
 }
@@ -330,6 +333,8 @@ function updatePickups(dt) {
       const d = Math.hypot(o.position.x - player.position.x, o.position.z - player.position.z);
       if (d < CFG.player.pickRadius) {
         S.carry.push({ type: p.type });
+        if (p.type === 'wood') Audio.S.pickWood(); else Audio.S.pickMeat();
+        if (S.carry.length >= cap) Audio.S.full();
         scene.remove(o);
         pickups.splice(i, 1);
       }
@@ -398,6 +403,7 @@ function startSwing() {
   const target = bear || tree;
   if (!target) return;
 
+  Audio.S.swing();
   S.swingTarget = target;
   S.swingT = 0.3;
   S.swingHit = false;
@@ -474,7 +480,9 @@ function hurtBear(b, dmg) {
   b.hp -= dmg;
   b.flash = 0.12;
   b.bar.setRatio(b.hp / b.maxHp);
+  Audio.S.bearHit();
   if (b.hp <= 0) {
+    Audio.S.bearDie();
     for (let i = 0; i < CFG.bear.meatDrop; i++) spawnPickup('meat', b.mesh.position.x, b.mesh.position.z);
     scene.remove(b.mesh);
     bears.splice(bears.indexOf(b), 1);
@@ -638,6 +646,7 @@ function damagePlayer(dmg) {
   S.hp -= dmg;
   S.hurtTimer = CFG.player.regenDelay;
   hud.flashDamage();
+  Audio.S.hurt();
   if (S.hp <= 0) {
     S.hp = 0;
     S.dead = 1.6;
@@ -646,6 +655,7 @@ function damagePlayer(dmg) {
     S.carry.splice(0, lose);
     while (carryMeshes.length) player.userData.carry.remove(carryMeshes.pop());
     syncCarry();
+    Audio.S.down();
     hud.toast('기절! 정착지로 돌아갑니다');
   }
 }
@@ -659,14 +669,14 @@ function updateStations(dt) {
   const dF = Math.hypot(player.position.x - FURNACE_POS.x, player.position.z - FURNACE_POS.z);
   if (dF < 4.2 && countCarry('meat') > 0 && S.cookQueue < CFG.grill.queueMax && S.depositTimer <= 0) {
     S.depositTimer = CFG.stall.depositRate;
-    if (takeFromCarry('meat')) S.cookQueue++;
+    if (takeFromCarry('meat')) { S.cookQueue++; Audio.S.deposit(); }
   }
 
   // 판매대: 통나무를 내려놓으면 바로 재고가 된다
   const dS = Math.hypot(player.position.x - STALL_POS.x, player.position.z - STALL_POS.z);
   if (dS < 4.2 && countCarry('wood') > 0 && S.stock.wood < CFG.stall.stockMax && S.depositTimer <= 0) {
     S.depositTimer = CFG.stall.depositRate;
-    if (takeFromCarry('wood')) S.stock.wood++;
+    if (takeFromCarry('wood')) { S.stock.wood++; Audio.S.deposit(); }
   }
 
   if (S.cookQueue > 0) {
@@ -675,6 +685,7 @@ function updateStations(dt) {
       S.cookTimer = CFG.grill.cookTime;
       S.cookQueue--;
       S.stock.meat = Math.min(CFG.stall.stockMax, S.stock.meat + 1);
+      Audio.S.cook();
     }
   }
 
@@ -705,6 +716,7 @@ function spawnBuyer() {
   label.sprite.position.y = 3.0;
   mesh.add(label.sprite);
 
+  Audio.S.buyerCome();
   buyers.push({ mesh, label, type, want, state: 'enter', serve: CFG.buyer.serveTime, got: 0, wait: 0 });
 }
 
@@ -749,6 +761,7 @@ function updateBuyers(dt) {
             b.state = 'leave';
             b.label.sprite.visible = false;
             S.served++;
+            Audio.S.sell();
             hud.toast(`판매 완료! +$${price * b.got}`);
           }
         }
@@ -805,6 +818,7 @@ function updateBills(dt) {
       S.money += b.value;
       hud.setMoney(S.money);
       hud.bumpMoney();
+      Audio.S.coin();
       scene.remove(b.mesh);
       bills.splice(i, 1);
     }
@@ -829,6 +843,7 @@ function updatePads(dt) {
       if (p.paid >= price - 0.01) {
         p.paid = 0;
         p.level++;
+        Audio.S.buy();
         p.buy(false);
         refreshPad(p);
         saveGame();
@@ -854,6 +869,7 @@ function updateTowers(dt) {
       );
       if (t.userData.cd <= 0) {
         t.userData.cd = CFG.archer.cd;
+        Audio.S.arrow();
         const arrow = makeArrow();
         arrow.position.set(t.position.x, 3.0, t.position.z);
         scene.add(arrow);
@@ -1063,6 +1079,7 @@ function frame(now) {
 
   if (S.running) {
     S.time += dt;
+    Audio.frameReset();
     updatePlayer(dt);
     updateBears(dt);
     updateTrees(dt);
@@ -1128,7 +1145,7 @@ createMenu({
 // 디버그 훅: 콘솔에서 상태를 들여다보거나 자동 테스트에 쓴다.
 window.__game = {
   S, bears, trees, pickups, bills, buyers, workers, towers, pads, player, scene, CFG,
-  spawnBear, spawnPickup, saveGame, snapshot,
+  spawnBear, spawnPickup, saveGame, snapshot, Audio,
 };
 
 document.getElementById('loading').classList.add('hidden');
