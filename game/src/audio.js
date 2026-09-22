@@ -101,6 +101,13 @@ export const Audio = (() => {
     bearHit() { tone(rand(300, 360), 0.05, 'triangle', 0.2, 180); noise(0.05, 0.18, 700); },
     bearDie() { tone(rand(150, 200), 0.34, 'sawtooth', 0.32, 58); noise(0.3, 0.26, 420); },
     arrow() { noise(0.07, 0.16, 2200); tone(700, 0.06, 'triangle', 0.1, 1200); },
+    skill() {
+      // 크게 휘두르는 바람 + 낮은 충격음 + 금속성 잔향
+      noise(0.45, 0.4, 900, 0.6);
+      tone(140, 0.4, 'sawtooth', 0.3, 50);
+      [880, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'triangle', 0.2, f * 1.2), i * 55));
+    },
+    skillReady() { tone(784, 0.1, 'sine', 0.16, 1046); },
     hurt() {
       tone(165, 0.16, 'sawtooth', 0.4, 58);
       tone(90, 0.22, 'triangle', 0.3, 42);

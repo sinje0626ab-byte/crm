@@ -19,6 +19,14 @@ export const CFG = {
     regenDelay: 3,
   },
 
+  // 낮/밤 주기(초). 밤에는 횃불을 들고 다닌다.
+  dayNight: { day: 120, night: 75, blend: 18 },
+
+  // S 스킬: 회전베기
+  skill: { cooldown: 9, radius: 6.8, damageMul: 2.4, knock: 7, duration: 0.7 },
+
+  attack: { repeatDelay: 0.05 },
+
   sword: {
     damage: 26,
     range: 3.4,
@@ -38,7 +46,7 @@ export const CFG = {
   goods: { woodPrice: 14, meatPrice: 24 },
   grill: { cookTime: 0.6, queueMax: 30 },
   stall: { stockMax: 60, depositRate: 0.09 },
-  buyer: { interval: 4.5, maxQueue: 4, wantMin: 2, wantMax: 5, speed: 4.8, serveTime: 0.9 },
+  buyer: { interval: 4.5, maxQueue: 4, wantMin: 2, wantMax: 5, speed: 2.4, serveTime: 0.9 },
   cash: { maxBills: 44 },
 
   archer: { range: 17, cd: 0.85, damage: 24, arrowSpeed: 30 },

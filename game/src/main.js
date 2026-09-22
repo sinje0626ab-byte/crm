@@ -10,7 +10,8 @@ import { Audio } from './audio.js';
 import {
   makePlayer, makeWorker, makeBear, makeHpBar, makeMeat, makeLog, makeCashBill,
   makeArrow, makeFurnace, makeStall, makeArcherTower, makePad, makeLabel,
-  makeChoppableTree, makeStump, makeBuyer, makeSwingTrail,
+  makeChoppableTree, makeStump, makeBuyer,
+  makeSlashArc, makeSparks, makeShockwave, makeHandTorch,
 } from './entities.js';
 
 const canvas = document.getElementById('scene');
@@ -53,6 +54,12 @@ const S = {
   swingT: 0,
   swingHit: false,
   swingTarget: null,
+  skillCd: 0,
+  skillT: 0,
+  skillHit: false,
+  clock: 0,          // 하루 주기 경과 시간(초)
+  day: 1,
+  night: false,
   spawnTimer: 2,
   buyerTimer: 3,
   autosaveTimer: CFG.autosaveEvery,
@@ -79,8 +86,29 @@ const player = makePlayer();
 player.position.copy(SPAWN_POS);
 scene.add(player);
 
-const trail = makeSwingTrail();
-player.add(trail);
+// 검 궤적(플레이어와 별도로 두어 스케일 영향을 받지 않게 한다)
+const slash = makeSlashArc();
+const slashGhost = makeSlashArc({ r0: 1.7, r1: 3.5, arc: 2.0 });
+scene.add(slash, slashGhost);
+
+const shockwave = makeShockwave();
+shockwave.visible = false;
+scene.add(shockwave);
+
+const sparkPool = [];
+for (let i = 0; i < 5; i++) {
+  const pts = makeSparks(14);
+  pts.visible = false;
+  scene.add(pts);
+  sparkPool.push({ pts, life: 0 });
+}
+
+// 밤에 드는 횃불
+const handTorch = makeHandTorch();
+handTorch.position.set(0, -0.72, 0.12);
+handTorch.rotation.x = -0.3;
+handTorch.visible = false;
+player.userData.parts.shoulderL.add(handTorch);
 
 const footRing = new THREE.Mesh(
   new THREE.RingGeometry(0.62, 0.86, 22),
@@ -401,7 +429,6 @@ function startSwing() {
   const bear = nearestBear(px, pz, CFG.sword.range + 0.4);
   const tree = bear ? null : nearestTree(px, pz, CFG.sword.range - 0.3);
   const target = bear || tree;
-  if (!target) return;
 
   Audio.S.swing();
   S.swingTarget = target;
@@ -409,9 +436,60 @@ function startSwing() {
   S.swingHit = false;
   S.swingCd = swingCooldown();
 
-  const tx = bear ? target.mesh.position.x : target.x;
-  const tz = bear ? target.mesh.position.z : target.z;
-  player.rotation.y = Math.atan2(tx - px, tz - pz);
+  if (target) {
+    const tx = bear ? target.mesh.position.x : target.x;
+    const tz = bear ? target.mesh.position.z : target.z;
+    player.rotation.y = Math.atan2(tx - px, tz - pz);
+  }
+
+  // 궤적을 휘두르는 방향에 맞춰 세팅
+  slash.position.set(px, 1.25, pz);
+  slash.rotation.y = player.rotation.y + 0.95;
+  slash.material.opacity = 0;
+  slashGhost.position.set(px, 1.05, pz);
+  slashGhost.rotation.y = slash.rotation.y;
+  slashGhost.material.opacity = 0;
+}
+
+// 타격 지점에서 불똥을 튀긴다
+function burstSparks(x, y, z, color = 0xfff2cf, speed = 4.5) {
+  const slot = sparkPool.find((s2) => s2.life <= 0) || sparkPool[0];
+  const arr = slot.pts.geometry.attributes.position.array;
+  const vel = slot.pts.userData.vel;
+  for (let i = 0; i < slot.pts.userData.count; i++) {
+    arr[i * 3] = x;
+    arr[i * 3 + 1] = y;
+    arr[i * 3 + 2] = z;
+    const a = Math.random() * Math.PI * 2;
+    const up = 0.4 + Math.random() * 1.2;
+    const sp = speed * (0.4 + Math.random() * 0.8);
+    vel[i * 3] = Math.cos(a) * sp;
+    vel[i * 3 + 1] = up * speed * 0.5;
+    vel[i * 3 + 2] = Math.sin(a) * sp;
+  }
+  slot.pts.geometry.attributes.position.needsUpdate = true;
+  slot.pts.material.color.setHex(color);
+  slot.pts.material.opacity = 1;
+  slot.pts.visible = true;
+  slot.life = 0.5;
+}
+
+function updateSparks(dt) {
+  for (const slot of sparkPool) {
+    if (slot.life <= 0) continue;
+    slot.life -= dt;
+    const arr = slot.pts.geometry.attributes.position.array;
+    const vel = slot.pts.userData.vel;
+    for (let i = 0; i < slot.pts.userData.count; i++) {
+      vel[i * 3 + 1] -= 14 * dt;
+      arr[i * 3] += vel[i * 3] * dt;
+      arr[i * 3 + 1] += vel[i * 3 + 1] * dt;
+      arr[i * 3 + 2] += vel[i * 3 + 2] * dt;
+    }
+    slot.pts.geometry.attributes.position.needsUpdate = true;
+    slot.pts.material.opacity = Math.max(0, slot.life / 0.5);
+    if (slot.life <= 0) slot.pts.visible = false;
+  }
 }
 
 function applySwingHit() {
@@ -431,31 +509,122 @@ function applySwingHit() {
     hurtBear(b, swordDamage());
     b.vx += (dx / d) * CFG.bear.knockback;
     b.vz += (dz / d) * CFG.bear.knockback;
+    burstSparks(b.mesh.position.x, 1.3, b.mesh.position.z, 0xffd9c0, 5);
     hitAny = true;
   }
-  if (hitAny) return;
+  if (hitAny) {
+    world.shake(0.22);
+    return;
+  }
 
   const t = S.swingTarget;
-  if (t && t.alive && Math.hypot(t.x - px, t.z - pz) < CFG.sword.range + 0.3) chopTree(t);
+  if (t && t.alive && Math.hypot(t.x - px, t.z - pz) < CFG.sword.range + 0.3) {
+    chopTree(t);
+    burstSparks(t.x, 1.1, t.z, 0xd8b98a, 3.6);
+    world.shake(0.14);
+  }
 }
 
 function updateSwing(dt) {
   const arm = player.userData.parts.shoulderR;
   if (S.swingT > 0) {
     S.swingT -= dt;
-    const p = 1 - Math.max(0, S.swingT) / 0.3;       // 0 → 1
+    const p = 1 - Math.max(0, S.swingT) / 0.3;
     arm.rotation.x = THREE.MathUtils.lerp(-2.3, 1.0, Math.min(1, p * 1.25));
-    player.userData.parts.body.rotation.y = Math.sin(p * Math.PI) * 0.4;
-    trail.material.opacity = Math.sin(Math.min(1, p) * Math.PI) * 0.5;
-    trail.rotation.z = THREE.MathUtils.lerp(0.9, -0.9, p);
-    if (!S.swingHit && p > 0.45) {
+    player.userData.parts.body.rotation.y = Math.sin(p * Math.PI) * 0.45;
+
+    // 궤적이 몸을 따라 훑고 지나가며 옅어진다
+    const sweep = THREE.MathUtils.lerp(0.95, -1.05, Math.min(1, p * 1.15));
+    slash.position.set(player.position.x, 1.25, player.position.z);
+    slash.rotation.y = player.rotation.y + sweep;
+    slash.material.opacity = Math.sin(Math.min(1, p) * Math.PI) * 0.85;
+    slash.scale.setScalar(0.9 + p * 0.25);
+
+    const ghostP = Math.max(0, p - 0.16);
+    slashGhost.position.set(player.position.x, 1.1, player.position.z);
+    slashGhost.rotation.y = player.rotation.y + THREE.MathUtils.lerp(0.95, -1.05, Math.min(1, ghostP * 1.15));
+    slashGhost.material.opacity = Math.sin(Math.min(1, ghostP) * Math.PI) * 0.4;
+    slashGhost.scale.setScalar(0.85 + ghostP * 0.2);
+
+    if (!S.swingHit && p > 0.42) {
       S.swingHit = true;
       applySwingHit();
     }
   } else {
-    arm.rotation.x = THREE.MathUtils.lerp(arm.rotation.x, 0, 1 - Math.pow(0.001, dt));
+    if (S.skillT <= 0) arm.rotation.x = THREE.MathUtils.lerp(arm.rotation.x, 0, 1 - Math.pow(0.001, dt));
     player.userData.parts.body.rotation.y *= 0.8;
-    trail.material.opacity = 0;
+    slash.material.opacity *= 0.82;
+    slashGhost.material.opacity *= 0.82;
+  }
+}
+
+/* ------------------------------------------------------- 스킬: 회전베기 */
+
+function castSkill() {
+  S.skillT = CFG.skill.duration;
+  S.skillHit = false;
+  S.skillCd = CFG.skill.cooldown;
+  Audio.S.skill();
+  shockwave.visible = true;
+  shockwave.material.opacity = 0.9;
+  shockwave.scale.setScalar(1);
+  shockwave.position.set(player.position.x, 0.5, player.position.z);
+  hud.toast('회전베기!');
+}
+
+function applySkillHit() {
+  const px = player.position.x;
+  const pz = player.position.z;
+  const r = CFG.skill.radius;
+  let hits = 0;
+
+  for (const b of [...bears]) {
+    const dx = b.mesh.position.x - px;
+    const dz = b.mesh.position.z - pz;
+    const d = Math.hypot(dx, dz);
+    if (d > r) continue;
+    hurtBear(b, swordDamage() * CFG.skill.damageMul);
+    b.vx += (dx / d) * CFG.skill.knock;
+    b.vz += (dz / d) * CFG.skill.knock;
+    burstSparks(b.mesh.position.x, 1.4, b.mesh.position.z, 0xffe0b0, 6);
+    hits++;
+  }
+  // 주변 나무도 한 번씩 찍는다
+  for (const t of [...trees]) {
+    if (!t.alive) continue;
+    if (Math.hypot(t.x - px, t.z - pz) > r) continue;
+    chopTree(t);
+    burstSparks(t.x, 1.1, t.z, 0xd8b98a, 3.5);
+    hits++;
+  }
+  world.shake(hits > 0 ? 0.5 : 0.25);
+}
+
+function updateSkill(dt) {
+  S.skillCd = Math.max(0, S.skillCd - dt);
+  if (S.skillT > 0) {
+    S.skillT -= dt;
+    const p = 1 - Math.max(0, S.skillT) / CFG.skill.duration;
+    player.rotation.y += dt * (Math.PI * 4) / CFG.skill.duration * (1 - p * 0.3);
+    player.userData.parts.shoulderR.rotation.x = 1.2;
+
+    slash.position.set(player.position.x, 1.3, player.position.z);
+    slash.rotation.y = player.rotation.y;
+    slash.scale.setScalar(1.5);
+    slash.material.opacity = Math.sin(Math.min(1, p) * Math.PI) * 0.9;
+
+    shockwave.position.set(player.position.x, 0.5, player.position.z);
+    shockwave.scale.setScalar(1 + p * CFG.skill.radius);
+    shockwave.material.opacity = (1 - p) * 0.85;
+
+    if (!S.skillHit && p > 0.28) {
+      S.skillHit = true;
+      applySkillHit();
+    }
+    if (S.skillT <= 0) {
+      shockwave.visible = false;
+      slash.scale.setScalar(1);
+    }
   }
 }
 
@@ -618,7 +787,7 @@ function updatePlayer(dt) {
 
   const d = input.read();
   const len = Math.hypot(d.x, d.z);
-  const moving = len > 0.08;
+  const moving = len > 0.08 && S.skillT <= 0;   // 스킬 중에는 제자리에서 회전
   if (moving) {
     const nx = player.position.x + d.x * CFG.player.speed * dt;
     const nz = player.position.z + d.z * CFG.player.speed * dt;
@@ -631,9 +800,16 @@ function updatePlayer(dt) {
   footRing.position.set(player.position.x, 0.38, player.position.z);
   footRing.visible = player.visible;
 
+  // A = 공격(누르고 있으면 계속), S = 스킬
   S.swingCd -= dt;
-  if (S.swingCd <= 0 && S.swingT <= 0) startSwing();
+  const skillPressed = input.consume('skill');
+  if (skillPressed && S.skillCd <= 0 && S.skillT <= 0) {
+    castSkill();
+  } else if (input.held('attack') && S.swingCd <= 0 && S.swingT <= 0 && S.skillT <= 0) {
+    startSwing();
+  }
   updateSwing(dt);
+  updateSkill(dt);
 
   S.hurtTimer -= dt;
   if (S.hurtTimer <= 0 && S.hp < CFG.player.maxHp) {
@@ -700,11 +876,17 @@ function updateStations(dt) {
 /* ================================================================ 손님 */
 
 const QUEUE_X = STALL_POS.x;
-const QUEUE_Z0 = STALL_POS.z + 3.2;
+const QUEUE_Z0 = STALL_POS.z + 3.4;
+const BUYER_SCALE = 1.02;
+const slotZ = (i) => QUEUE_Z0 + i * 1.7;
 
+// 손님은 바깥에서 걸어 들어오지 않고 판매대 앞 줄에 바로 선다.
 function spawnBuyer() {
-  const mesh = makeBuyer(buyers.length + Math.floor(S.time));
-  mesh.position.set(GATE_X + 5, 0.35, C.z + (Math.random() - 0.5) * 3);
+  const idx = buyers.length;
+  const mesh = makeBuyer(idx + Math.floor(S.time));
+  mesh.position.set(QUEUE_X + (Math.random() - 0.5) * 0.5, 0.35, slotZ(idx));
+  mesh.rotation.y = Math.PI;          // 카운터를 바라본다
+  mesh.scale.setScalar(0.02);
   Object.assign(mesh.userData, { stack: [], group: new THREE.Group() });
   mesh.userData.group.position.y = 1.7;
   mesh.add(mesh.userData.group);
@@ -717,7 +899,7 @@ function spawnBuyer() {
   mesh.add(label.sprite);
 
   Audio.S.buyerCome();
-  buyers.push({ mesh, label, type, want, state: 'enter', serve: CFG.buyer.serveTime, got: 0, wait: 0 });
+  buyers.push({ mesh, label, type, want, state: 'queue', serve: CFG.buyer.serveTime, got: 0, bye: 0 });
 }
 
 function updateBuyers(dt) {
@@ -728,58 +910,103 @@ function updateBuyers(dt) {
     spawnBuyer();
   }
 
-  buyers.forEach((b, idx) => {
+  for (let i = buyers.length - 1; i >= 0; i--) {
+    const b = buyers[i];
     const m = b.mesh;
-    let moving = true;
+    let moving = false;
 
-    if (b.state === 'enter' || b.state === 'queue') {
-      const slotZ = QUEUE_Z0 + idx * 1.6;
-      const d = routeThroughGate(m, QUEUE_X, slotZ, CFG.buyer.speed, dt);
-      if (d < 0.4) {
-        moving = false;
-        m.rotation.y = Math.PI; // 카운터를 바라본다
-        b.state = idx === 0 ? 'serve' : 'queue';
-      }
-    } else if (b.state === 'serve') {
-      moving = false;
-      m.rotation.y = Math.PI;
-      if (S.stock[b.type] > 0) {
-        b.serve -= dt;
-        if (b.serve <= 0) {
-          b.serve = CFG.buyer.serveTime / 2;
-          S.stock[b.type]--;
-          b.got++;
-          const price = b.type === 'wood' ? CFG.goods.woodPrice : CFG.goods.meatPrice;
-          spawnBill(price);
-          const item = b.type === 'wood' ? makeLog(0.9) : makeMeat();
-          item.scale.setScalar(0.8);
-          item.position.y = b.mesh.userData.stack.length * 0.28;
-          b.mesh.userData.group.add(item);
-          b.mesh.userData.stack.push(item);
-          b.label.render(`× ${b.want - b.got}`);
-          if (b.got >= b.want) {
-            b.state = 'leave';
-            b.label.sprite.visible = false;
-            S.served++;
-            Audio.S.sell();
-            hud.toast(`판매 완료! +$${price * b.got}`);
-          }
-        }
-      } else {
-        b.wait += dt;
+    if (b.state === 'leave') {
+      // 물건을 받으면 옆으로 몇 걸음 물러나며 사라진다
+      b.bye += dt;
+      m.position.z += dt * CFG.buyer.speed * 0.8;
+      m.position.x += dt * CFG.buyer.speed * 0.5;
+      m.rotation.y = Math.PI * 0.25;
+      moving = true;
+      const k = Math.max(0, 1 - b.bye / 1.1);
+      m.scale.setScalar(BUYER_SCALE * k);
+      if (b.bye > 1.1) {
+        scene.remove(m);
+        buyers.splice(i, 1);
+        continue;
       }
     } else {
-      const d = routeThroughGate(m, GATE_X + 8, C.z, CFG.buyer.speed, dt);
-      if (m.position.x > GATE_X + 6 || d < 0.5) {
-        scene.remove(m);
-        buyers.splice(buyers.indexOf(b), 1);
-        return;
+      // 앞사람이 빠지면 한 칸씩 당겨 선다
+      m.scale.setScalar(THREE.MathUtils.lerp(m.scale.x, BUYER_SCALE, 1 - Math.pow(0.002, dt)));
+      const targetZ = slotZ(i);
+      const dz = targetZ - m.position.z;
+      if (Math.abs(dz) > 0.06) {
+        m.position.z += Math.sign(dz) * Math.min(Math.abs(dz), CFG.buyer.speed * dt);
+        moving = true;
+      }
+      const dx = QUEUE_X - m.position.x;
+      if (Math.abs(dx) > 0.06) m.position.x += Math.sign(dx) * Math.min(Math.abs(dx), CFG.buyer.speed * dt);
+      m.rotation.y = Math.PI;
+
+      if (i === 0) {
+        if (S.stock[b.type] > 0) {
+          b.serve -= dt;
+          if (b.serve <= 0) {
+            b.serve = CFG.buyer.serveTime / 2;
+            S.stock[b.type]--;
+            b.got++;
+            const price = b.type === 'wood' ? CFG.goods.woodPrice : CFG.goods.meatPrice;
+            spawnBill(price);
+            const item = b.type === 'wood' ? makeLog(0.9) : makeMeat();
+            item.scale.setScalar(0.8);
+            item.position.y = m.userData.stack.length * 0.28;
+            m.userData.group.add(item);
+            m.userData.stack.push(item);
+            b.label.render(`× ${b.want - b.got}`);
+            if (b.got >= b.want) {
+              b.state = 'leave';
+              b.label.sprite.visible = false;
+              S.served++;
+              Audio.S.sell();
+              hud.toast(`판매 완료! +$${price * b.got}`);
+            }
+          }
+        }
       }
     }
 
-    walkAnim(m, moving, S.time + idx, 0.7);
+    walkAnim(m, moving, S.time + i, 0.7);
     if (b.label.sprite.visible) b.label.sprite.quaternion.copy(camera.quaternion);
-  });
+  }
+}
+
+/* ============================================================== 낮 / 밤 */
+
+const CYCLE = CFG.dayNight.day + CFG.dayNight.night;
+
+// 1 = 한낮, 0 = 한밤 (해질녘·새벽은 그 사이를 오간다)
+function daylightFactor() {
+  const { day, night, blend } = CFG.dayNight;
+  const t = S.clock % CYCLE;
+  if (t < day - blend) return 1;
+  if (t < day) return 1 - (t - (day - blend)) / blend;
+  if (t < day + night - blend) return 0;
+  return (t - (day + night - blend)) / blend;
+}
+
+function updateDayNight(dt) {
+  S.clock += dt;
+  const dayNo = Math.floor(S.clock / CYCLE) + 1;
+  const f = daylightFactor();
+  world.setDaylight(f);
+
+  // 어두워지면 횃불을 든다
+  const torchOn = f < 0.62;
+  handTorch.visible = torchOn;
+  handTorch.userData.light.intensity = torchOn ? (1 - f) * 2.4 : 0;
+  if (torchOn) handTorch.userData.flame.scale.setScalar(0.85 + Math.sin(S.time * 11) * 0.15);
+
+  const night = f < 0.4;
+  if (night !== S.night) {
+    S.night = night;
+    hud.toast(night ? '밤이 되었습니다 — 횃불을 들었습니다' : `${dayNo}일차 아침이 밝았습니다`);
+  }
+  S.day = dayNo;
+  hud.setDay(dayNo, night);
 }
 
 /* ================================================================ 현금 */
@@ -970,6 +1197,42 @@ function updateWorkers(dt) {
   }
 }
 
+/* ============================================================= 액션 UI */
+
+// 터치 기기는 우측 고정 버튼, PC는 캐릭터 옆에 뜨는 A/S 키 안내
+const isTouch = matchMedia('(pointer: coarse)').matches;
+document.body.classList.toggle('touch', isTouch);
+input.bindButtons(document.getElementById('btn-attack'), document.getElementById('btn-skill'));
+
+const keyHints = document.getElementById('key-hints');
+const keyA = document.getElementById('key-a');
+const keyS = document.getElementById('key-s');
+const projV = new THREE.Vector3();
+let skillWasReady = true;
+
+function updateActionUi() {
+  const px = player.position.x;
+  const pz = player.position.z;
+  const target = nearestBear(px, pz, CFG.sword.range + 0.6) || nearestTree(px, pz, CFG.sword.range);
+  const canAttack = !!target && S.dead <= 0;
+  const ready = S.skillCd <= 0;
+  if (ready && !skillWasReady) Audio.S.skillReady();
+  skillWasReady = ready;
+
+  hud.setActions(canAttack, ready, 1 - S.skillCd / CFG.skill.cooldown);
+
+  if (!isTouch) {
+    projV.set(px, 2.4, pz).project(camera);
+    const x = (projV.x * 0.5 + 0.5) * innerWidth;
+    const y = (-projV.y * 0.5 + 0.5) * innerHeight;
+    keyHints.style.transform = `translate(${Math.round(x + 46)}px, ${Math.round(y)}px)`;
+    // 나무나 야수가 사정거리에 들어오면 캐릭터 옆에 뜬다
+    keyHints.classList.toggle('show', canAttack);
+    keyA.classList.toggle('dim', !canAttack);
+    keyS.classList.toggle('dim', !ready);
+  }
+}
+
 /* ================================================================ 안내 */
 
 function updateHint() {
@@ -981,7 +1244,11 @@ function updateHint() {
   } else if (bills.length >= 6) msg = '판매대 옆 돈다발을 주우세요';
   else if (countCarry('wood') > 0) msg = '판매대에 나무를 내려놓으세요';
   else if (countCarry('meat') > 0) msg = '화로에 고기를 넣으세요';
-  else if (S.stock.wood + S.stock.meat === 0) msg = '북쪽 숲에서 나무를 베거나 남쪽에서 곰을 사냥하세요';
+  else if (S.stock.wood + S.stock.meat === 0) {
+    msg = isTouch
+      ? '북쪽 숲이나 남쪽 사냥터에서 A 버튼으로 공격하세요'
+      : '북쪽 숲이나 남쪽 사냥터에서 A 키로 공격, S 키로 스킬';
+  }
   else msg = '손님이 오기를 기다리는 중...';
   hud.setHint(msg);
 }
@@ -998,6 +1265,7 @@ function snapshot() {
     padLevels: Object.fromEntries(pads.map((p) => [p.id, p.level])),
     stock: { ...S.stock },
     served: S.served,
+    clock: Math.round(S.clock),
   };
 }
 
@@ -1010,6 +1278,7 @@ function applySave(data) {
   S.stock.wood = data.stock?.wood || 0;
   S.stock.meat = data.stock?.meat || 0;
   S.served = data.served || 0;
+  S.clock = data.clock || 0;
 
   for (let i = 0; i < (data.swordLevel || 0); i++) upgradeSword(true);
   for (let i = 0; i < (data.bagLevel || 0); i++) upgradeBag(true);
@@ -1034,6 +1303,15 @@ function resetGame() {
   S.served = 0;
   S.hp = CFG.player.maxHp;
   S.dead = 0;
+  S.clock = 0;
+  S.day = 1;
+  S.night = false;
+  S.skillCd = 0;
+  S.skillT = 0;
+  S.swingT = 0;
+  shockwave.visible = false;
+  slash.material.opacity = 0;
+  slashGhost.material.opacity = 0;
   S.carry.length = 0;
   while (carryMeshes.length) player.userData.carry.remove(carryMeshes.pop());
 
@@ -1080,7 +1358,9 @@ function frame(now) {
   if (S.running) {
     S.time += dt;
     Audio.frameReset();
+    updateDayNight(dt);
     updatePlayer(dt);
+    updateSparks(dt);
     updateBears(dt);
     updateTrees(dt);
     updatePickups(dt);
@@ -1102,6 +1382,7 @@ function frame(now) {
       S.autosaveTimer = CFG.autosaveEvery;
       saveGame();
     }
+    updateActionUi();
     hud.setCarry(S.carry.length, carryCap());
     hud.setStock(S.stock.wood, S.stock.meat);
     hud.tick(dt);
@@ -1145,7 +1426,7 @@ createMenu({
 // 디버그 훅: 콘솔에서 상태를 들여다보거나 자동 테스트에 쓴다.
 window.__game = {
   S, bears, trees, pickups, bills, buyers, workers, towers, pads, player, scene, CFG,
-  spawnBear, spawnPickup, saveGame, snapshot, Audio,
+  spawnBear, spawnPickup, saveGame, snapshot, Audio, startSwing, castSkill,
 };
 
 document.getElementById('loading').classList.add('hidden');

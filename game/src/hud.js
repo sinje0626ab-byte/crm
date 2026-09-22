@@ -9,6 +9,12 @@ export function createHud() {
     carryWrap: document.getElementById('carry-wrap'),
     hpFill: document.getElementById('hp-fill'),
     sword: document.getElementById('sword-lv'),
+    day: document.getElementById('day-chip'),
+    dayNum: document.getElementById('day-num'),
+    dayIcon: document.getElementById('day-icon'),
+    btnAttack: document.getElementById('btn-attack'),
+    btnSkill: document.getElementById('btn-skill'),
+    skillCd: document.getElementById('skill-cd'),
     toast: document.getElementById('toast'),
     hint: document.getElementById('hint'),
     damage: document.getElementById('damage-flash'),
@@ -41,6 +47,17 @@ export function createHud() {
       const r = Math.max(0, Math.min(1, ratio));
       el.hpFill.style.width = `${r * 100}%`;
       el.hpFill.style.background = r > 0.5 ? '#5fd07a' : r > 0.25 ? '#ffd23f' : '#ff5a4e';
+    },
+    setDay(dayNo, night) {
+      el.dayNum.textContent = `${dayNo}일차`;
+      el.day.classList.toggle('night', night);
+      el.dayIcon.classList.toggle('moon', night);
+    },
+    // A(공격) 가능 여부와 S(스킬) 쿨타임 표시
+    setActions(canAttack, skillReady, cdRatio) {
+      el.btnAttack.classList.toggle('dim', !canAttack);
+      el.btnSkill.classList.toggle('dim', !skillReady);
+      el.skillCd.style.height = `${Math.max(0, Math.min(1, 1 - cdRatio)) * 100}%`;
     },
     setSwordLevel(lv) {
       el.sword.textContent = `Lv.${lv + 1}`;

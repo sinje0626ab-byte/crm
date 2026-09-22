@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { CFG, COLORS } from './config.js';
 import {
-  mat, makeFence, makeLogStack, makeHut, makeTent, makeTorch, makeBarrel,
+  mat, makeFence, makeLogStack, makeHut, makeTent, makeTorch, makeBarrel, makeStars,
 } from './entities.js';
 
 export function createWorld(canvas) {
@@ -20,7 +20,8 @@ export function createWorld(canvas) {
   const camOffset = new THREE.Vector3(-3, 20.5, 17);
 
   // 차가운 하늘빛 + 낮게 깔린 따뜻한 태양(설원의 해질녘 느낌)
-  scene.add(new THREE.HemisphereLight(0xcfe0f0, 0x7e93aa, 0.85));
+  const hemi = new THREE.HemisphereLight(0xcfe0f0, 0x7e93aa, 0.85);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xffe7cf, 1.5);
   sun.castShadow = true;
   sun.shadow.mapSize.set(1024, 1024);
@@ -82,17 +83,22 @@ export function createWorld(canvas) {
     [makeLogStack(3, 4), -11, 3.5, 0.4],
     [makeBarrel(), 6, -3.5, 0],
     [makeBarrel(), 7, -4.6, 0],
-    [makeTorch(false), -16.5, -14.5, 0],
-    [makeTorch(false), 16.5, 14.5, 0],
+    [makeTorch(true), -16.5, -14.5, 0],
+    [makeTorch(true), 16.5, 14.5, 0],
     [makeTorch(false), -16.5, 14.5, 0],
     [makeTorch(false), 16.5, -14.5, 0],
   ];
   const flames = [];
+  const torchLights = [];
   for (const [obj, x, z, ry] of deco) {
     obj.position.set(x, 0.35, z);
     obj.rotation.y = ry;
     camp.add(obj);
     if (obj.userData.flame) flames.push(obj.userData.flame);
+    if (obj.userData.light) {
+      obj.userData.light.intensity = 0;
+      torchLights.push(obj.userData.light);
+    }
   }
 
   /* --------------------------------------------------------------- 숲 */
@@ -162,6 +168,10 @@ export function createWorld(canvas) {
     }
   }
 
+  /* ----------------------------------------------------------- 밤하늘 */
+  const stars = makeStars();
+  scene.add(stars);
+
   /* ----------------------------------------------------------- 눈발 */
   const FLAKES = 520;
   const snowGeo = new THREE.BufferGeometry();
@@ -207,15 +217,60 @@ export function createWorld(canvas) {
   addEventListener('resize', resize);
   resize();
 
+  /* ------------------------------------------------------- 낮 / 밤 */
+  const DAY_SKY = new THREE.Color(0xbdd2e4);
+  const NIGHT_SKY = new THREE.Color(0x172336);
+  const DAY_SUN = new THREE.Color(0xffe7cf);
+  const NIGHT_SUN = new THREE.Color(0x9db4da);
+  const DAY_HEMI = new THREE.Color(0xcfe0f0);
+  const NIGHT_HEMI = new THREE.Color(0x3f5270);
+  const DAY_GROUND = new THREE.Color(0x7e93aa);
+  const NIGHT_GROUND = new THREE.Color(0x2b3950);
+  const skyColor = new THREE.Color();
+
+  // light = 1 이면 한낮, 0 이면 한밤
+  function setDaylight(light) {
+    const l = Math.max(0, Math.min(1, light));
+    sun.intensity = 0.2 + 1.3 * l;
+    sun.color.copy(NIGHT_SUN).lerp(DAY_SUN, l);
+    hemi.intensity = 0.3 + 0.55 * l;
+    hemi.color.copy(NIGHT_HEMI).lerp(DAY_HEMI, l);
+    hemi.groundColor.copy(NIGHT_GROUND).lerp(DAY_GROUND, l);
+
+    skyColor.copy(NIGHT_SKY).lerp(DAY_SKY, l);
+    scene.background.copy(skyColor);
+    scene.fog.color.copy(skyColor);
+    scene.fog.near = 40 + 18 * l;
+    scene.fog.far = 95 + 45 * l;
+
+    stars.material.opacity = Math.pow(1 - l, 1.5) * 0.9;
+    const torch = Math.pow(1 - l, 1.2);
+    for (const t of torchLights) t.intensity = torch * 1.5;
+  }
+  setDaylight(1);
+
+  /* ------------------------------------------------------------ 카메라 */
+  let shakeMag = 0;
+  function shake(amount) {
+    shakeMag = Math.min(0.8, shakeMag + amount);
+  }
+
   const camTarget = new THREE.Vector3();
   function updateCamera(focus, dt) {
     camTarget.set(focus.x + 2, 0, focus.z);
     const desired = camTarget.clone().add(camOffset);
     camera.position.lerp(desired, 1 - Math.pow(0.0016, dt));
+    if (shakeMag > 0.001) {
+      camera.position.x += (Math.random() - 0.5) * shakeMag;
+      camera.position.y += (Math.random() - 0.5) * shakeMag;
+      camera.position.z += (Math.random() - 0.5) * shakeMag;
+      shakeMag *= Math.pow(0.02, dt);
+    }
     camera.lookAt(camTarget.x, 1.2, camTarget.z);
     sun.position.set(focus.x + 26, 34, focus.z + 20);
     sun.target.position.set(focus.x, 0, focus.z);
     sun.target.updateMatrixWorld();
+    stars.position.set(focus.x, 0, focus.z);
   }
 
   function tickAmbient(dt, time) {
@@ -224,5 +279,5 @@ export function createWorld(canvas) {
     }
   }
 
-  return { renderer, scene, camera, camp, updateCamera, updateSnow, tickAmbient };
+  return { renderer, scene, camera, camp, updateCamera, updateSnow, tickAmbient, setDaylight, shake };
 }

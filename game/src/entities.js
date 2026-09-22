@@ -109,15 +109,132 @@ export function makeSword() {
   return g;
 }
 
-// 검이 지나간 자리에 남는 반달 궤적
-export function makeSwingTrail() {
-  const shape = new THREE.RingGeometry(1.6, 3.4, 16, 1, -0.7, 1.4);
-  const m = new THREE.Mesh(shape, new THREE.MeshBasicMaterial({
-    color: 0xdcefff, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false,
+/* ------------------------------------------------------------- 전투 이펙트 */
+
+// 검 궤적용 텍스처: 가로로는 시작이 옅고 끝이 밝은 띠, 세로로는 가장자리가 흐려진다.
+let slashTex = null;
+function slashTexture() {
+  if (slashTex) return slashTex;
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 64;
+  const ctx = c.getContext('2d');
+  const g = ctx.createLinearGradient(0, 0, 256, 0);
+  g.addColorStop(0, 'rgba(255,255,255,0)');
+  g.addColorStop(0.28, 'rgba(190,230,255,0.75)');
+  g.addColorStop(0.72, 'rgba(255,255,255,1)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, 256, 64);
+  const v = ctx.createLinearGradient(0, 0, 0, 64);
+  v.addColorStop(0, 'rgba(0,0,0,0)');
+  v.addColorStop(0.5, 'rgba(0,0,0,1)');
+  v.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.globalCompositeOperation = 'destination-in';
+  ctx.fillStyle = v;
+  ctx.fillRect(0, 0, 256, 64);
+  slashTex = new THREE.CanvasTexture(c);
+  return slashTex;
+}
+
+// 초승달 모양의 베기 궤적(양 끝이 얇아진다).
+export function makeSlashArc({ r0 = 1.95, r1 = 4.0, arc = 2.3, seg = 26 } = {}) {
+  const pos = [];
+  const uv = [];
+  const idx = [];
+  for (let i = 0; i <= seg; i++) {
+    const t = i / seg;
+    const a = -arc / 2 + arc * t;
+    const taper = Math.pow(Math.sin(Math.PI * t), 0.6);
+    const ri = r0 + (r1 - r0) * 0.3 * (1 - taper);
+    const ro = r0 + (r1 - r0) * (0.5 + 0.5 * taper);
+    pos.push(Math.cos(a) * ri, 0, Math.sin(a) * ri);
+    pos.push(Math.cos(a) * ro, 0, Math.sin(a) * ro);
+    uv.push(t, 0, t, 1);
+    if (i < seg) {
+      const k = i * 2;
+      idx.push(k, k + 1, k + 2, k + 1, k + 3, k + 2);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+    map: slashTexture(), color: 0xd6ecff, transparent: true, opacity: 0, depthWrite: false,
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
   }));
-  m.rotation.x = -Math.PI / 2;
-  m.position.y = 1.1;
+  m.renderOrder = 5;
   return m;
+}
+
+// 타격 지점에서 튀는 불똥/파편
+export function makeSparks(count = 14) {
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(count * 3), 3));
+  const points = new THREE.Points(geo, new THREE.PointsMaterial({
+    color: 0xfff2cf, size: 0.22, transparent: true, opacity: 0,
+    depthWrite: false, blending: THREE.AdditiveBlending,
+  }));
+  points.frustumCulled = false;
+  points.userData.vel = new Float32Array(count * 3);
+  points.userData.count = count;
+  return points;
+}
+
+// 스킬(회전베기)용 확산 충격파
+export function makeShockwave() {
+  const m = new THREE.Mesh(
+    new THREE.RingGeometry(0.85, 1, 40),
+    new THREE.MeshBasicMaterial({
+      color: 0xbfe6ff, transparent: true, opacity: 0,
+      depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    }),
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.renderOrder = 4;
+  return m;
+}
+
+/* --------------------------------------------------------------- 밤 요소 */
+
+// 손에 드는 횃불(밤에만 켠다)
+export function makeHandTorch() {
+  const g = new THREE.Group();
+  const stick = mesh(new THREE.CylinderGeometry(0.06, 0.07, 1.0, 5), COLORS.woodDark);
+  g.add(stick);
+  const wrap = mesh(new THREE.CylinderGeometry(0.13, 0.11, 0.24, 6), 0x3a2f24);
+  wrap.position.y = 0.5;
+  g.add(wrap);
+  const flame = mesh(new THREE.ConeGeometry(0.19, 0.5, 5), COLORS.ember, { emissive: 0xff8a2b });
+  flame.position.y = 0.8;
+  g.add(flame);
+  const light = new THREE.PointLight(0xffa64d, 0, 15, 2);
+  light.position.y = 0.85;
+  g.add(light);
+  g.userData.flame = flame;
+  g.userData.light = light;
+  return g;
+}
+
+// 밤하늘의 별
+export function makeStars(count = 260, radius = 120) {
+  const pos = new Float32Array(count * 3);
+  for (let i = 0; i < count; i++) {
+    const a = Math.random() * Math.PI * 2;
+    const h = 0.25 + Math.random() * 0.7;
+    const r = radius * Math.sqrt(1 - h * h);
+    pos[i * 3] = Math.cos(a) * r;
+    pos[i * 3 + 1] = radius * h;
+    pos[i * 3 + 2] = Math.sin(a) * r;
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  const stars = new THREE.Points(geo, new THREE.PointsMaterial({
+    color: 0xdce9ff, size: 0.9, transparent: true, opacity: 0, depthWrite: false,
+  }));
+  stars.frustumCulled = false;
+  return stars;
 }
 
 /* ==================================================================== 곰 */

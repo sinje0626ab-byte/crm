@@ -70,6 +70,56 @@
   .ico.wood { background: linear-gradient(#a3703f, #6d4a2c); border: 2px solid #4d3423; border-radius: 6px; }
   .ico.meat { background: linear-gradient(#e0655c, #a83a34); border: 2px solid #7d2b26; border-radius: 8px; }
 
+  /* 낮/밤 표시 */
+  #day-chip { gap: 6px; }
+  #day-chip.night { color: #bcd2f0; }
+  .day-icon {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: #ffce5a; box-shadow: 0 0 9px rgba(255, 206, 90, 0.7);
+  }
+  .day-icon.moon {
+    background: #d7e6fb; box-shadow: inset -5px 1px 0 rgba(20, 30, 45, 0.9), 0 0 9px rgba(190, 215, 255, 0.5);
+  }
+
+  /* 행동 버튼: 모바일은 우측 고정, PC는 캐릭터 옆 키 안내 */
+  #action-pad {
+    position: absolute; right: calc(18px + env(safe-area-inset-right));
+    bottom: calc(26px + env(safe-area-inset-bottom));
+    display: none; flex-direction: column-reverse; gap: 14px; pointer-events: none;
+  }
+  body.touch #action-pad { display: flex; }
+  .act-btn {
+    position: relative; pointer-events: auto; width: 76px; height: 76px; overflow: hidden;
+    display: grid; place-items: center; font-size: 26px; font-weight: bold; color: #22190a;
+    background: linear-gradient(#f0d489, #c9a24a); border: 3px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%; box-shadow: var(--shadow); transition: transform 0.08s, opacity 0.2s;
+    touch-action: none; user-select: none;
+  }
+  .act-btn small { position: absolute; bottom: 9px; font-size: 10px; opacity: 0.8; letter-spacing: 0.06em; }
+  .act-btn.down { transform: scale(0.92); }
+  .act-btn.dim { opacity: 0.45; }
+  #btn-skill { background: linear-gradient(#a7d8ff, #4a90c8); }
+  #skill-cd {
+    position: absolute; left: 0; bottom: 0; width: 100%; height: 0%;
+    background: rgba(10, 18, 28, 0.55); pointer-events: none;
+  }
+
+  #key-hints {
+    position: absolute; top: 0; left: 0; display: flex; gap: 7px;
+    opacity: 0; transition: opacity 0.15s; pointer-events: none; will-change: transform;
+  }
+  #key-hints.show { opacity: 1; }
+  body.touch #key-hints { display: none; }
+  .key-cap {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 5px 9px; font-size: 15px; font-weight: bold; color: #22190a;
+    background: linear-gradient(#f4dc9c, #c9a24a); border-bottom: 3px solid #8a6c2c;
+    border-radius: 9px; box-shadow: var(--shadow); transition: opacity 0.15s;
+  }
+  .key-cap small { font-size: 9px; font-weight: bold; opacity: 0.85; letter-spacing: 0.04em; }
+  .key-cap.skill { background: linear-gradient(#bfe4ff, #4a90c8); border-bottom-color: #2c5f8a; }
+  .key-cap.dim { opacity: 0.35; }
+
   #hint {
     position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom));
     transform: translateX(-50%); padding: 8px 18px; font-size: 14px; font-weight: bold;
@@ -166,7 +216,57 @@
     .chip { font-size: 15px; padding: 6px 10px; }
     #money-pill { font-size: 17px; }
     #hp-bar { width: 118px; }
-    #hint { font-size: 12px; }
+    /* 낮/밤 표시 */
+  #day-chip { gap: 6px; }
+  #day-chip.night { color: #bcd2f0; }
+  .day-icon {
+    width: 15px; height: 15px; border-radius: 50%;
+    background: #ffce5a; box-shadow: 0 0 9px rgba(255, 206, 90, 0.7);
+  }
+  .day-icon.moon {
+    background: #d7e6fb; box-shadow: inset -5px 1px 0 rgba(20, 30, 45, 0.9), 0 0 9px rgba(190, 215, 255, 0.5);
+  }
+
+  /* 행동 버튼: 모바일은 우측 고정, PC는 캐릭터 옆 키 안내 */
+  #action-pad {
+    position: absolute; right: calc(18px + env(safe-area-inset-right));
+    bottom: calc(26px + env(safe-area-inset-bottom));
+    display: none; flex-direction: column-reverse; gap: 14px; pointer-events: none;
+  }
+  body.touch #action-pad { display: flex; }
+  .act-btn {
+    position: relative; pointer-events: auto; width: 76px; height: 76px; overflow: hidden;
+    display: grid; place-items: center; font-size: 26px; font-weight: bold; color: #22190a;
+    background: linear-gradient(#f0d489, #c9a24a); border: 3px solid rgba(255, 255, 255, 0.5);
+    border-radius: 50%; box-shadow: var(--shadow); transition: transform 0.08s, opacity 0.2s;
+    touch-action: none; user-select: none;
+  }
+  .act-btn small { position: absolute; bottom: 9px; font-size: 10px; opacity: 0.8; letter-spacing: 0.06em; }
+  .act-btn.down { transform: scale(0.92); }
+  .act-btn.dim { opacity: 0.45; }
+  #btn-skill { background: linear-gradient(#a7d8ff, #4a90c8); }
+  #skill-cd {
+    position: absolute; left: 0; bottom: 0; width: 100%; height: 0%;
+    background: rgba(10, 18, 28, 0.55); pointer-events: none;
+  }
+
+  #key-hints {
+    position: absolute; top: 0; left: 0; display: flex; gap: 7px;
+    opacity: 0; transition: opacity 0.15s; pointer-events: none; will-change: transform;
+  }
+  #key-hints.show { opacity: 1; }
+  body.touch #key-hints { display: none; }
+  .key-cap {
+    display: flex; flex-direction: column; align-items: center; gap: 2px;
+    padding: 5px 9px; font-size: 15px; font-weight: bold; color: #22190a;
+    background: linear-gradient(#f4dc9c, #c9a24a); border-bottom: 3px solid #8a6c2c;
+    border-radius: 9px; box-shadow: var(--shadow); transition: opacity 0.15s;
+  }
+  .key-cap small { font-size: 9px; font-weight: bold; opacity: 0.85; letter-spacing: 0.04em; }
+  .key-cap.skill { background: linear-gradient(#bfe4ff, #4a90c8); border-bottom-color: #2c5f8a; }
+  .key-cap.dim { opacity: 0.35; }
+
+  #hint { font-size: 12px; }
   }
 </style>
 <script type="importmap">
@@ -196,9 +296,20 @@
   </div>
 
   <div id="top-right">
+    <div id="day-chip" class="chip panel"><span id="day-icon" class="day-icon"></span><span id="day-num">1일차</span></div>
     <div class="chip panel"><span class="ico wood"></span><span id="stock-wood">0</span></div>
     <div class="chip panel"><span class="ico meat"></span><span id="stock-meat">0</span></div>
     <div id="money-pill" class="chip panel"><span class="ico cash"></span><span id="money">0</span></div>
+  </div>
+
+  <div id="action-pad">
+    <div id="btn-attack" class="act-btn">A<small>공격</small></div>
+    <div id="btn-skill" class="act-btn">S<small>스킬</small><div id="skill-cd"></div></div>
+  </div>
+
+  <div id="key-hints">
+    <div id="key-a" class="key-cap">A<small>공격</small></div>
+    <div id="key-s" class="key-cap skill">S<small>스킬</small></div>
   </div>
 
   <div id="toast"></div>
