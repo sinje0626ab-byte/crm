@@ -76,20 +76,39 @@ export function createMenu(handlers) {
 
   continueBtn.addEventListener('click', () => beginGame(handlers.onContinue));
 
-  el('btn-pause').addEventListener('click', () => {
+  const levelup = el('levelup');
+  const isPaused = () => !pause.classList.contains('hidden');
+  // 메뉴나 레벨업 카드가 떠 있으면 일시정지를 건드리지 않는다
+  const canPause = () =>
+    menu.classList.contains('hidden') && levelup.classList.contains('hidden');
+
+  function openPause() {
+    if (!canPause() || isPaused()) return;
     Audio.S.ui();
     Audio.setMusicVolume(0.25);
     pause.classList.remove('hidden');
     pauseSaveInfo.textContent = hasSave() ? `마지막 저장: ${savedAtText()}` : '아직 저장하지 않았습니다';
     refreshMuteUi();
     handlers.onPause();
-  });
+  }
 
-  el('btn-resume').addEventListener('click', () => {
+  function closePause() {
+    if (!isPaused()) return;
     Audio.S.ui();
     Audio.setMusicVolume(0.5);
     pause.classList.add('hidden');
     handlers.onResume();
+  }
+
+  el('btn-pause').addEventListener('click', openPause);
+  el('btn-resume').addEventListener('click', closePause);
+
+  // PC: ESC 로 일시정지를 여닫는다
+  addEventListener('keydown', (e) => {
+    if (e.code !== 'Escape') return;
+    e.preventDefault();
+    if (isPaused()) closePause();
+    else openPause();
   });
 
   el('btn-save').addEventListener('click', () => {
