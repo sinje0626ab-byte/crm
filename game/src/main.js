@@ -1529,6 +1529,7 @@ function updateActionUi() {
 // 정착지 밖에서만 미니맵을 띄운다
 function updateMinimap(dt) {
   const outside = !inCamp(player.position.x, player.position.z);
+  world.updateHouse(player.position.x, player.position.z, !outside, dt);
   hud.setMinimap(outside);
   if (!outside) return;
   minimapTimer -= dt;
@@ -1766,6 +1767,7 @@ createMenu({
 window.__game = {
   S, bears, trees, pickups, bills, buyers, workers, towers, pads, player, scene, CFG,
   spawnBear, spawnPickup, saveGame, snapshot, Audio, startSwing, castSkill, gainXp, SKILL_IDS,
+  camera, renderer,
 };
 
 document.getElementById('loading').classList.add('hidden');

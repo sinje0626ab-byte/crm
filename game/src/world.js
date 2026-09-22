@@ -2,7 +2,7 @@
 import * as THREE from 'three';
 import { CFG, COLORS } from './config.js';
 import {
-  mat, makeFence, makeLogStack, makeHut, makeTent, makeTorch, makeBarrel, makeStars,
+  mat, makeFence, makeLogStack, makeHut, makeTent, makeTorch, makeBarrel, makeStars, makeCampHouse,
 } from './entities.js';
 
 export function createWorld(canvas) {
@@ -64,7 +64,13 @@ export function createWorld(canvas) {
   inner.receiveShadow = true;
   camp.add(inner);
 
-  camp.add(makeFence(c.w + 0.3, c.d + 0.3, 1.2, 5));
+  const fence = makeFence(c.w + 0.3, c.d + 0.3, 1.2, 5);
+  camp.add(fence);
+
+  // 밖에서 보면 지붕까지 얹힌 집, 안에 들어가면 사라져 내부가 보인다
+  const house = makeCampHouse(c.w, c.d, 5);
+  house.position.y = 0.35;
+  camp.add(house);
 
   // 정착지는 밤에도 환하게: 캠프 전체를 덮는 따뜻한 조명 하나
   // r155+ 의 점광원은 거리제곱으로 감쇠한다. 13m 위에서 캠프를 덮으려면
@@ -251,11 +257,52 @@ export function createWorld(canvas) {
     scene.fog.far = 95 + 45 * l;
 
     stars.material.opacity = Math.pow(1 - l, 1.5) * 0.9;
+    const glow = Math.pow(1 - l, 1.1);
+    for (const m of house.userData.windows) m.emissiveIntensity = glow * 1.6;
     const dark = Math.pow(1 - l, 1.2);
     for (const t of torchLights) t.intensity = dark * 7;
     campLight.intensity = dark * 30;
   }
   setDaylight(1);
+
+  /* --------------------------------------------------- 집 껍데기 전환 */
+  const EAVE = 2.4;
+  const houseBox = {
+    x0: c.x - c.w / 2 - EAVE, x1: c.x + c.w / 2 + EAVE,
+    z0: c.z - c.d / 2 - EAVE, z1: c.z + c.d / 2 + EAVE,
+    top: 11.2,
+  };
+
+  // 카메라와 플레이어 사이를 집이 가로막는지(집 북쪽에 서면 지붕에 가린다)
+  function blocksView(px, pz) {
+    const cx = px + camOffset.x;
+    const cy = camOffset.y;
+    const cz = pz + camOffset.z;
+    for (let i = 1; i <= 8; i++) {
+      const t = i / 9;
+      const y = cy + (1.2 - cy) * t;
+      if (y > houseBox.top || y < 0.4) continue;
+      const x = cx + (px - cx) * t;
+      const z = cz + (pz - cz) * t;
+      if (x > houseBox.x0 && x < houseBox.x1 && z > houseBox.z0 && z < houseBox.z1) return true;
+    }
+    return false;
+  }
+
+  let houseShown = 1;
+  // 1 = 집(벽·지붕) 보임, 0 = 내부가 드러남
+  function updateHouse(px, pz, inside, dt) {
+    const target = inside || blocksView(px, pz) ? 0 : 1;
+    const k = dt ? 1 - Math.pow(0.0008, dt) : 1;
+    houseShown += (target - houseShown) * k;
+    if (Math.abs(target - houseShown) < 0.01) houseShown = target;
+
+    house.visible = houseShown > 0.02;
+    for (const m of house.userData.mats) m.opacity = houseShown;
+    fence.visible = houseShown < 0.98;
+    house.traverse((o) => { if (o.isMesh) o.castShadow = houseShown > 0.6; });
+  }
+  updateHouse(0, 60, false, 0);
 
   /* ------------------------------------------------------------ 카메라 */
   let shakeMag = 0;
@@ -287,5 +334,8 @@ export function createWorld(canvas) {
     }
   }
 
-  return { renderer, scene, camera, camp, updateCamera, updateSnow, tickAmbient, setDaylight, shake };
+  return {
+    renderer, scene, camera, camp, updateCamera, updateSnow, tickAmbient,
+    setDaylight, shake, updateHouse,
+  };
 }

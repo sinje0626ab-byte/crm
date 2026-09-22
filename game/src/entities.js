@@ -616,6 +616,141 @@ export function makeFence(w, d, height = 1.2, gapHalf = 0) {
   return g;
 }
 
+// 정착지를 덮는 '집' 껍데기 — 밖에서는 벽과 지붕이 보이고,
+// 안으로 들어가면 통째로 사라져 내부가 드러난다(탑다운 컷어웨이).
+export function makeCampHouse(w, d, gapHalf = 5) {
+  const g = new THREE.Group();
+  const mats = [];
+  const make = (geo, color, opts = {}) => {
+    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
+      color, flatShading: true, transparent: true, opacity: 1, ...opts,
+    }));
+    m.castShadow = true;
+    mats.push(m.material);
+    return m;
+  };
+
+  const H = 3.5;                 // 벽 높이(따라다니는 카메라를 가리지 않게 낮게)
+  const T = 0.6;                 // 벽 두께
+  const hw = w / 2;
+  const hd = d / 2;
+
+  // 앞뒤 벽(z 방향 끝)
+  for (const z of [-hd, hd]) {
+    const wall = make(new THREE.BoxGeometry(w + T, H, T), COLORS.wood);
+    wall.position.set(0, H / 2, z);
+    g.add(wall);
+    const cap = make(new THREE.BoxGeometry(w + T + 0.3, 0.32, T + 0.3), COLORS.roof);
+    cap.position.set(0, H + 0.1, z);
+    g.add(cap);
+  }
+
+  // 왼쪽 벽(통짜)
+  const left = make(new THREE.BoxGeometry(T, H, d), COLORS.wood);
+  left.position.set(-hw, H / 2, 0);
+  g.add(left);
+  const leftCap = make(new THREE.BoxGeometry(T + 0.3, 0.32, d + 0.3), COLORS.roof);
+  leftCap.position.set(-hw, H + 0.1, 0);
+  g.add(leftCap);
+
+  // 오른쪽 벽: 가운데를 비워 출입구를 만든다
+  const side = (d - gapHalf * 2) / 2;
+  for (const dir of [-1, 1]) {
+    const seg = make(new THREE.BoxGeometry(T, H, side), COLORS.wood);
+    seg.position.set(hw, H / 2, dir * (gapHalf + side / 2));
+    g.add(seg);
+    const cap = make(new THREE.BoxGeometry(T + 0.3, 0.32, side + 0.3), COLORS.roof);
+    cap.position.set(hw, H + 0.1, dir * (gapHalf + side / 2));
+    g.add(cap);
+  }
+  // 출입구 상인방과 기둥
+  const lintel = make(new THREE.BoxGeometry(T + 0.2, 1.1, gapHalf * 2 + 0.6), COLORS.woodDark);
+  lintel.position.set(hw, H - 0.55, 0);
+  g.add(lintel);
+  for (const dir of [-1, 1]) {
+    const post = make(new THREE.BoxGeometry(T + 0.3, H, 0.5), COLORS.woodDark);
+    post.position.set(hw, H / 2, dir * gapHalf);
+    g.add(post);
+  }
+
+  // 창문: 밤이면 안에서 불빛이 새어 나온다
+  const windows = [];
+  const winGeo = new THREE.BoxGeometry(1.5, 1.1, T + 0.16);
+  const addWindow = (x, z, rotY) => {
+    const win = new THREE.Mesh(winGeo, new THREE.MeshLambertMaterial({
+      color: 0x6b5a3e, emissive: 0xffb45c, emissiveIntensity: 0, transparent: true, opacity: 1,
+    }));
+    win.position.set(x, 1.9, z);
+    win.rotation.y = rotY;
+    mats.push(win.material);
+    windows.push(win.material);
+    g.add(win);
+  };
+  for (const x of [-hw * 0.55, 0, hw * 0.55]) {
+    addWindow(x, -hd, 0);
+    addWindow(x, hd, 0);
+  }
+  for (const z of [-hd * 0.5, hd * 0.5]) addWindow(-hw, z, Math.PI / 2);
+
+  // 지붕: 용마루를 가운데 두고 양쪽으로 기운 박공지붕
+  const EAVE = 2.4;
+  const RISE = 7.2;                       // 벽 위에서 용마루까지
+  const run = hd + EAVE;
+  const pitch = Math.atan(RISE / run);
+  const slope = Math.hypot(run, RISE);
+  const roofW = (hw + EAVE) * 2;
+
+  for (const dir of [-1, 1]) {
+    const plane = make(new THREE.BoxGeometry(roofW, 0.4, slope), COLORS.woodDark);
+    plane.rotation.x = dir * pitch;
+    plane.position.set(0, H + RISE / 2, dir * run / 2);
+    g.add(plane);
+
+    // 지붕에 쌓인 눈(처마 쪽은 목재가 드러나도록 조금 짧게)
+    const snow = make(new THREE.BoxGeometry(roofW * 0.985, 0.24, slope * 0.72), COLORS.roof);
+    snow.rotation.x = dir * pitch;
+    snow.position.set(
+      0,
+      H + RISE / 2 + 0.3 * Math.cos(pitch) + slope * 0.14 * Math.sin(pitch),
+      dir * (run / 2 - slope * 0.14 * Math.cos(pitch)),
+    );
+    g.add(snow);
+  }
+
+  // 용마루
+  const ridge = make(new THREE.BoxGeometry(roofW + 0.5, 0.6, 0.9), COLORS.trunk);
+  ridge.position.set(0, H + RISE + 0.1, 0);
+  g.add(ridge);
+
+  // 양 끝의 삼각 박공벽
+  const gableShape = new THREE.Shape();
+  gableShape.moveTo(-run, 0);
+  gableShape.lineTo(run, 0);
+  gableShape.lineTo(0, RISE);
+  gableShape.closePath();
+  const gableGeo = new THREE.ExtrudeGeometry(gableShape, { depth: T, bevelEnabled: false });
+  for (const dir of [-1, 1]) {
+    const gable = make(gableGeo, COLORS.wood);
+    gable.rotation.y = Math.PI / 2;
+    gable.position.set(dir * (hw - T / 2), H, 0);
+    g.add(gable);
+  }
+
+  // 굴뚝
+  const chimZ = -hd * 0.18;
+  const roofYAt = H + RISE * (1 - Math.abs(chimZ) / run);   // 그 지점의 지붕 높이
+  const chimney = make(new THREE.BoxGeometry(1.7, 4.2, 1.7), COLORS.stone);
+  chimney.position.set(-hw * 0.45, roofYAt - 0.6, chimZ);
+  g.add(chimney);
+  const chimneyCap = make(new THREE.BoxGeometry(2.1, 0.32, 2.1), COLORS.roof);
+  chimneyCap.position.set(-hw * 0.45, roofYAt + 1.6, chimZ);
+  g.add(chimneyCap);
+
+  g.userData.mats = mats;
+  g.userData.windows = windows;
+  return g;
+}
+
 export function makeArcherTower() {
   const g = new THREE.Group();
   const legGeo = new THREE.BoxGeometry(0.24, 2.2, 0.24);
