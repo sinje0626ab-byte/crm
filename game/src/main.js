@@ -33,7 +33,8 @@ const GATE_X = C.x + C.w / 2;      // 캠프 오른쪽 문
 const GATE_HALF = 5;
 
 const FURNACE_POS = new THREE.Vector3(-24, 0.35, -5);
-const STALL_POS = new THREE.Vector3(-6, 0.35, 6);
+const WOOD_STALL = new THREE.Vector3(-6, 0.35, 6);
+const MEAT_STALL = new THREE.Vector3(-6, 0.35, -6);
 const CASH_POS = new THREE.Vector3(-18, 0.35, 11);
 const SPAWN_POS = new THREE.Vector3(-10, 0.35, 0);
 
@@ -44,11 +45,11 @@ const S = {
   money: 0,
   swordLevel: 0,
   bagLevel: 0,
-  carry: [],                 // [{type:'wood'|'meat'}]
+  carry: { wood: 0, meat: 0 },   // 종류별로 따로 짊어진다
   hp: CFG.player.maxHp,
   hurtTimer: 0,
   dead: 0,
-  stock: { wood: 0, meat: 0 },
+  stock: { wood: 0, meat: 0, cooked: 0 },   // meat=생고기, cooked=조리된 고기
   cookQueue: 0,
   cookTimer: 0,
   depositTimer: 0,
@@ -136,7 +137,12 @@ footRing.rotation.x = -Math.PI / 2;
 footRing.position.y = 0.38;
 scene.add(footRing);
 
-const carryMeshes = [];
+// 나무는 오른쪽, 고기는 왼쪽 기둥으로 쌓는다
+const carryMeshes = { wood: [], meat: [] };
+const carryGroups = { wood: new THREE.Group(), meat: new THREE.Group() };
+carryGroups.wood.position.x = 0.34;
+carryGroups.meat.position.x = -0.34;
+player.userData.carry.add(carryGroups.wood, carryGroups.meat);
 
 /* ================================================================ 시설 */
 
@@ -144,13 +150,20 @@ const furnace = makeFurnace();
 furnace.position.copy(FURNACE_POS);
 scene.add(furnace);
 
-const stall = makeStall();
-stall.position.copy(STALL_POS);
-scene.add(stall);
-
-const stallLabel = makeLabel('cash', '판매대', 3.4);
-stallLabel.sprite.position.set(STALL_POS.x, 4.2, STALL_POS.z);
-scene.add(stallLabel.sprite);
+// 나무 판매대 / 고기 판매대를 따로 둔다
+const stalls = {
+  wood: { pos: WOOD_STALL, dir: 1, mesh: makeStall(), label: makeLabel('wood', '나무 판매대', 3.8) },
+  meat: { pos: MEAT_STALL, dir: -1, mesh: makeStall(), label: makeLabel('meat', '고기 판매대', 3.8) },
+};
+for (const key of ['wood', 'meat']) {
+  const st = stalls[key];
+  st.mesh.position.copy(st.pos);
+  st.mesh.rotation.y = st.dir > 0 ? 0 : Math.PI;   // 손님이 서는 쪽을 바라본다
+  scene.add(st.mesh);
+  st.label.sprite.position.set(st.pos.x, 4.2, st.pos.z);
+  scene.add(st.label.sprite);
+  st.shown = -1;
+}
 
 const furnaceLabel = makeLabel('meat', '화로', 3.0);
 furnaceLabel.sprite.position.set(FURNACE_POS.x, 5.6, FURNACE_POS.z);
@@ -173,25 +186,33 @@ for (const z of [-9, 9]) {
   towers.push(t);
 }
 
-// 판매대 위 재고 더미
-const stockGroup = stall.userData.stock;
-let stockShown = { wood: -1, meat: -1 };
+// 판매대 위 재고 더미(각 판매대마다 따로)
 function refreshStockVisual() {
-  if (stockShown.wood === S.stock.wood && stockShown.meat === S.stock.meat) return;
-  stockShown = { ...S.stock };
-  stockGroup.clear();
-  const woodN = Math.min(9, S.stock.wood);
-  for (let i = 0; i < woodN; i++) {
-    const log = makeLog(1.1);
-    log.position.set(-1.4, 0.18 + Math.floor(i / 3) * 0.34, -0.35 + (i % 3) * 0.35);
-    stockGroup.add(log);
+  // 나무 판매대
+  const w = Math.min(12, S.stock.wood);
+  if (stalls.wood.shown !== w) {
+    stalls.wood.shown = w;
+    const g = stalls.wood.mesh.userData.stock;
+    g.clear();
+    for (let i = 0; i < w; i++) {
+      const log = makeLog(1.1);
+      log.position.set(-1.5 + (i % 4) * 1.0, 0.18 + Math.floor(i / 4) * 0.34, 0);
+      g.add(log);
+    }
   }
-  const meatN = Math.min(9, S.stock.meat);
-  for (let i = 0; i < meatN; i++) {
-    const m = makeMeat();
-    m.scale.setScalar(0.8);
-    m.position.set(1.4, 0.2 + Math.floor(i / 3) * 0.3, -0.35 + (i % 3) * 0.35);
-    stockGroup.add(m);
+  // 고기 판매대(조리된 고기는 조금 더 크고 진하게 쌓인다)
+  const m = Math.min(12, S.stock.meat + S.stock.cooked);
+  if (stalls.meat.shown !== m) {
+    stalls.meat.shown = m;
+    const g = stalls.meat.mesh.userData.stock;
+    g.clear();
+    const cooked = Math.min(S.stock.cooked, m);
+    for (let i = 0; i < m; i++) {
+      const piece = makeMeat();
+      piece.scale.setScalar(i < cooked ? 0.95 : 0.78);
+      piece.position.set(-1.5 + (i % 4) * 1.0, 0.2 + Math.floor(i / 4) * 0.3, 0);
+      g.add(piece);
+    }
   }
 }
 
@@ -376,12 +397,13 @@ function updatePickups(dt) {
       continue;
     }
 
-    if (S.dead <= 0 && S.carry.length < cap) {
+    // 종류별로 따로 담는다(한쪽이 가득 차도 다른 쪽은 계속 주울 수 있다)
+    if (S.dead <= 0 && S.carry[p.type] < cap) {
       const d = Math.hypot(o.position.x - player.position.x, o.position.z - player.position.z);
       if (d < CFG.player.pickRadius) {
-        S.carry.push({ type: p.type });
+        S.carry[p.type]++;
         if (p.type === 'wood') Audio.S.pickWood(); else Audio.S.pickMeat();
-        if (S.carry.length >= cap) Audio.S.full();
+        if (S.carry[p.type] >= cap) Audio.S.full();
         scene.remove(o);
         pickups.splice(i, 1);
       }
@@ -390,31 +412,30 @@ function updatePickups(dt) {
   syncCarry();
 }
 
-// 머리 위 짐 더미(나무는 눕힌 통나무, 고기는 고깃덩이)
+// 머리 위 짐 더미 — 나무와 고기를 좌우로 나눠 따로 쌓는다
 function syncCarry() {
-  const g = player.userData.carry;
-  while (carryMeshes.length > S.carry.length) g.remove(carryMeshes.pop());
-  while (carryMeshes.length < S.carry.length) {
-    const item = S.carry[carryMeshes.length];
-    const m = item.type === 'wood' ? makeLog(1.15) : makeMeat();
-    m.position.y = carryMeshes.length * 0.3;
-    m.rotation.y = (carryMeshes.length % 2) * 0.5 + (item.type === 'wood' ? 0 : Math.random());
-    m.scale.setScalar(item.type === 'wood' ? 0.85 : 0.9);
-    g.add(m);
-    carryMeshes.push(m);
+  for (const type of ['wood', 'meat']) {
+    const arr = carryMeshes[type];
+    const g = carryGroups[type];
+    const n = S.carry[type];
+    while (arr.length > n) g.remove(arr.pop());
+    while (arr.length < n) {
+      const m = type === 'wood' ? makeLog(1.05) : makeMeat();
+      m.position.y = arr.length * 0.3;
+      m.scale.setScalar(type === 'wood' ? 0.8 : 0.85);
+      m.rotation.y = type === 'wood' ? (arr.length % 2) * 0.35 : Math.random() * Math.PI;
+      g.add(m);
+      arr.push(m);
+    }
   }
 }
 
-function countCarry(type) {
-  return S.carry.reduce((n, it) => n + (it.type === type ? 1 : 0), 0);
-}
+const carryTotal = () => S.carry.wood + S.carry.meat;
 
+// 한 개 내려놓기
 function takeFromCarry(type) {
-  const i = S.carry.findIndex((it) => it.type === type);
-  if (i < 0) return false;
-  S.carry.splice(i, 1);
-  // 더미를 위에서부터 다시 쌓는다
-  while (carryMeshes.length) player.userData.carry.remove(carryMeshes.pop());
+  if (S.carry[type] <= 0) return false;
+  S.carry[type]--;
   syncCarry();
   return true;
 }
@@ -1103,9 +1124,8 @@ function damagePlayer(dmg) {
     S.hp = 0;
     S.dead = 1.6;
     player.visible = false;
-    const lose = Math.floor(S.carry.length / 2);
-    S.carry.splice(0, lose);
-    while (carryMeshes.length) player.userData.carry.remove(carryMeshes.pop());
+    S.carry.wood = Math.ceil(S.carry.wood / 2);
+    S.carry.meat = Math.ceil(S.carry.meat / 2);
     syncCarry();
     Audio.S.down();
     hud.toast('기절! 정착지로 돌아갑니다');
@@ -1116,19 +1136,22 @@ function damagePlayer(dmg) {
 
 function updateStations(dt) {
   S.depositTimer -= dt;
+  const ready = S.depositTimer <= 0 && S.dead <= 0;
+  const near = (pos) => Math.hypot(player.position.x - pos.x, player.position.z - pos.z) < 4.2;
+  const meatRoom = S.stock.meat + S.stock.cooked < CFG.stall.stockMax;
 
-  // 화로: 생고기를 넣으면 조리되어 판매 재고가 된다
-  const dF = Math.hypot(player.position.x - FURNACE_POS.x, player.position.z - FURNACE_POS.z);
-  if (dF < 4.2 && countCarry('meat') > 0 && S.cookQueue < CFG.grill.queueMax && S.depositTimer <= 0) {
-    S.depositTimer = CFG.stall.depositRate;
-    if (takeFromCarry('meat')) { S.cookQueue++; Audio.S.deposit(); }
-  }
-
-  // 판매대: 통나무를 내려놓으면 바로 재고가 된다
-  const dS = Math.hypot(player.position.x - STALL_POS.x, player.position.z - STALL_POS.z);
-  if (dS < 4.2 && countCarry('wood') > 0 && S.stock.wood < CFG.stall.stockMax && S.depositTimer <= 0) {
+  // 나무 판매대: 통나무를 내려놓으면 바로 재고가 된다
+  if (ready && near(WOOD_STALL) && S.carry.wood > 0 && S.stock.wood < CFG.stall.stockMax) {
     S.depositTimer = CFG.stall.depositRate;
     if (takeFromCarry('wood')) { S.stock.wood++; Audio.S.deposit(); }
+  } else if (ready && near(MEAT_STALL) && S.carry.meat > 0 && meatRoom) {
+    // 고기 판매대: 생고기를 그대로 팔 수 있다
+    S.depositTimer = CFG.stall.depositRate;
+    if (takeFromCarry('meat')) { S.stock.meat++; Audio.S.deposit(); }
+  } else if (ready && near(FURNACE_POS) && S.carry.meat > 0 && S.cookQueue < CFG.grill.queueMax) {
+    // 화로: 구우면 훨씬 비싸게 팔린다
+    S.depositTimer = CFG.stall.depositRate;
+    if (takeFromCarry('meat')) { S.cookQueue++; Audio.S.deposit(); }
   }
 
   if (S.cookQueue > 0) {
@@ -1136,7 +1159,7 @@ function updateStations(dt) {
     if (S.cookTimer <= 0) {
       S.cookTimer = CFG.grill.cookTime;
       S.cookQueue--;
-      S.stock.meat = Math.min(CFG.stall.stockMax, S.stock.meat + 1);
+      if (S.stock.meat + S.stock.cooked < CFG.stall.stockMax) S.stock.cooked++;
       Audio.S.cook();
     }
   }
@@ -1151,52 +1174,77 @@ function updateStations(dt) {
 
 /* ================================================================ 손님 */
 
-const QUEUE_X = STALL_POS.x;
-const QUEUE_Z0 = STALL_POS.z + 3.4;
+// 판매대별 대기줄 — 각자 자기 판매대 앞에 선다
+const slotPos = (kind, i) => {
+  const st = stalls[kind];
+  return [st.pos.x, st.pos.z + st.dir * (3.4 + i * 1.7)];
+};
 const BUYER_SCALE = 1.02;
-const slotZ = (i) => QUEUE_Z0 + i * 1.7;
 
-// 손님은 바깥에서 걸어 들어오지 않고 판매대 앞 줄에 바로 선다.
-function spawnBuyer() {
-  const idx = buyers.length;
-  const mesh = makeBuyer(idx + Math.floor(S.time));
-  mesh.position.set(QUEUE_X + (Math.random() - 0.5) * 0.5, 0.35, slotZ(idx));
-  mesh.rotation.y = Math.PI;          // 카운터를 바라본다
+function stallStock(kind) {
+  return kind === 'wood' ? S.stock.wood : S.stock.meat + S.stock.cooked;
+}
+
+// 조리된 고기를 먼저 팔아 이득을 남긴다
+function takeStallUnit(kind) {
+  if (kind === 'wood') {
+    S.stock.wood--;
+    return CFG.goods.woodPrice;
+  }
+  if (S.stock.cooked > 0) {
+    S.stock.cooked--;
+    return CFG.goods.cookedPrice;
+  }
+  S.stock.meat--;
+  return CFG.goods.meatPrice;
+}
+
+function queueOf(kind) {
+  return buyers.filter((b) => b.kind === kind && b.state !== 'leave');
+}
+
+function spawnBuyer(kind) {
+  const idx = queueOf(kind).length;
+  const [sx, sz] = slotPos(kind, idx);
+  const mesh = makeBuyer(buyers.length + Math.floor(S.time));
+  mesh.position.set(sx + (Math.random() - 0.5) * 0.5, 0.35, sz);
+  mesh.rotation.y = stalls[kind].dir > 0 ? Math.PI : 0;   // 카운터를 바라본다
   mesh.scale.setScalar(0.02);
   Object.assign(mesh.userData, { stack: [], group: new THREE.Group() });
   mesh.userData.group.position.y = 1.7;
   mesh.add(mesh.userData.group);
   scene.add(mesh);
 
-  const type = Math.random() < 0.55 ? 'wood' : 'meat';
   const want = CFG.buyer.wantMin + Math.floor(Math.random() * (CFG.buyer.wantMax - CFG.buyer.wantMin + 1));
-  const label = makeLabel(type, `× ${want}`, 2.2);
+  const label = makeLabel(kind, `× ${want}`, 2.2);
   label.sprite.position.y = 3.0;
   mesh.add(label.sprite);
 
   Audio.S.buyerCome();
-  buyers.push({ mesh, label, type, want, state: 'queue', serve: CFG.buyer.serveTime, got: 0, bye: 0 });
+  buyers.push({ mesh, label, kind, want, state: 'queue', serve: CFG.buyer.serveTime, got: 0, bye: 0 });
 }
 
 function updateBuyers(dt) {
   S.buyerTimer -= dt;
-  const stockTotal = S.stock.wood + S.stock.meat;
-  if (S.buyerTimer <= 0 && buyers.length < CFG.buyer.maxQueue && stockTotal > 0) {
+  if (S.buyerTimer <= 0) {
     S.buyerTimer = CFG.buyer.interval;
-    spawnBuyer();
+    // 재고가 있고 줄이 덜 찬 판매대에 손님이 온다
+    const open = ['wood', 'meat'].filter(
+      (k) => stallStock(k) > 0 && queueOf(k).length < CFG.buyer.maxQueue,
+    );
+    if (open.length) spawnBuyer(open[(Math.random() * open.length) | 0]);
   }
 
+  const seen = { wood: 0, meat: 0 };
   for (let i = buyers.length - 1; i >= 0; i--) {
     const b = buyers[i];
     const m = b.mesh;
     let moving = false;
 
     if (b.state === 'leave') {
-      // 물건을 받으면 옆으로 몇 걸음 물러나며 사라진다
       b.bye += dt;
-      m.position.z += dt * CFG.buyer.speed * 0.8;
+      m.position.z += dt * CFG.buyer.speed * 0.8 * stalls[b.kind].dir;
       m.position.x += dt * CFG.buyer.speed * 0.5;
-      m.rotation.y = Math.PI * 0.25;
       moving = true;
       const k = Math.max(0, 1 - b.bye / 1.1);
       m.scale.setScalar(BUYER_SCALE * k);
@@ -1207,39 +1255,39 @@ function updateBuyers(dt) {
       }
     } else {
       // 앞사람이 빠지면 한 칸씩 당겨 선다
+      const idx = seen[b.kind]++;
+      const [tx, tz] = slotPos(b.kind, idx);
       m.scale.setScalar(THREE.MathUtils.lerp(m.scale.x, BUYER_SCALE, 1 - Math.pow(0.002, dt)));
-      const targetZ = slotZ(i);
-      const dz = targetZ - m.position.z;
+      const dz = tz - m.position.z;
       if (Math.abs(dz) > 0.06) {
         m.position.z += Math.sign(dz) * Math.min(Math.abs(dz), CFG.buyer.speed * dt);
         moving = true;
       }
-      const dx = QUEUE_X - m.position.x;
+      const dx = tx - m.position.x;
       if (Math.abs(dx) > 0.06) m.position.x += Math.sign(dx) * Math.min(Math.abs(dx), CFG.buyer.speed * dt);
-      m.rotation.y = Math.PI;
+      m.rotation.y = stalls[b.kind].dir > 0 ? Math.PI : 0;
 
-      if (i === 0) {
-        if (S.stock[b.type] > 0) {
-          b.serve -= dt;
-          if (b.serve <= 0) {
-            b.serve = CFG.buyer.serveTime / 2;
-            S.stock[b.type]--;
-            b.got++;
-            const price = b.type === 'wood' ? CFG.goods.woodPrice : CFG.goods.meatPrice;
-            spawnBill(price);
-            const item = b.type === 'wood' ? makeLog(0.9) : makeMeat();
-            item.scale.setScalar(0.8);
-            item.position.y = m.userData.stack.length * 0.28;
-            m.userData.group.add(item);
-            m.userData.stack.push(item);
-            b.label.render(`× ${b.want - b.got}`);
-            if (b.got >= b.want) {
-              b.state = 'leave';
-              b.label.sprite.visible = false;
-              S.served++;
-              Audio.S.sell();
-              hud.toast(`판매 완료! +$${price * b.got}`);
-            }
+      if (idx === 0 && stallStock(b.kind) > 0) {
+        b.serve -= dt;
+        if (b.serve <= 0) {
+          b.serve = CFG.buyer.serveTime / 2;
+          const price = takeStallUnit(b.kind);
+          b.got++;
+          b.paid = (b.paid || 0) + price;
+          spawnBill(price);
+          const item = b.kind === 'wood' ? makeLog(0.9) : makeMeat();
+          item.scale.setScalar(0.8);
+          item.position.y = m.userData.stack.length * 0.28;
+          m.userData.group.add(item);
+          m.userData.stack.push(item);
+          b.label.render(`× ${b.want - b.got}`);
+          if (b.got >= b.want) {
+            b.state = 'leave';
+            b.label.sprite.visible = false;
+            S.served++;
+            gainXp(CFG.level.saleXp * b.got);
+            Audio.S.sell();
+            hud.toast(`판매 완료! +$${b.paid}`);
           }
         }
       }
@@ -1448,7 +1496,7 @@ function updateWorkers(dt) {
         moving = false;
       }
     } else {
-      const dest = u.type === 'wood' ? STALL_POS : FURNACE_POS;
+      const dest = u.type === 'wood' ? WOOD_STALL : FURNACE_POS;
       const d = routeThroughGate(w, dest.x, dest.z + 3, CFG.worker.speed, dt);
       if (d < 3.6 && inCamp(w.position.x, w.position.z)) {
         if (u.type === 'wood') S.stock.wood = Math.min(CFG.stall.stockMax, S.stock.wood + u.carry);
@@ -1489,7 +1537,8 @@ const projV = new THREE.Vector3();
 const minimap = createMinimap(document.getElementById('minimap'));
 const MINIMAP_STATIONS = [
   { x: FURNACE_POS.x, z: FURNACE_POS.z },
-  { x: STALL_POS.x, z: STALL_POS.z },
+  { x: WOOD_STALL.x, z: WOOD_STALL.z },
+  { x: MEAT_STALL.x, z: MEAT_STALL.z },
   { x: CASH_POS.x, z: CASH_POS.z },
 ];
 let minimapTimer = 0;
@@ -1540,13 +1589,15 @@ function updateMinimap(dt) {
 function updateHint() {
   const cap = carryCap();
   let msg;
-  if (S.carry.length >= cap) msg = '가방이 가득 찼습니다! 정착지로 돌아가세요';
+  if (S.carry.wood >= cap && S.carry.meat >= cap) msg = '양손이 가득 찼습니다! 정착지로 돌아가세요';
+  else if (S.carry.wood >= cap) msg = '나무가 가득! 나무 판매대에 내려놓으세요';
+  else if (S.carry.meat >= cap) msg = '고기가 가득! 고기 판매대나 화로로 가세요';
   else if (buyers.some((b) => b.state === 'serve' && S.stock[b.type] === 0)) {
     msg = '손님이 물건을 기다립니다!';
   } else if (bills.length >= 6) msg = '판매대 옆 돈다발을 주우세요';
-  else if (countCarry('wood') > 0) msg = '판매대에 나무를 내려놓으세요';
-  else if (countCarry('meat') > 0) msg = '화로에 고기를 넣으세요';
-  else if (S.stock.wood + S.stock.meat === 0) {
+  else if (S.carry.wood > 0) msg = '나무 판매대(남쪽)에 통나무를 내려놓으세요';
+  else if (S.carry.meat > 0) msg = '고기 판매대(북쪽)에 팔거나 화로에 구우세요';
+  else if (S.stock.wood + S.stock.meat + S.stock.cooked === 0) {
     const owned = SKILL_IDS.filter((id) => S.skills[id] > 0).map((id) => CFG.skills[id].key);
     msg = isTouch
       ? `북쪽 숲이나 남쪽 사냥터에서 A 버튼으로 공격${owned.length ? ' · 스킬 버튼도 쓰세요' : ''}`
@@ -1584,6 +1635,7 @@ function applySave(data) {
   S.money = data.money || 0;
   S.stock.wood = data.stock?.wood || 0;
   S.stock.meat = data.stock?.meat || 0;
+  S.stock.cooked = data.stock?.cooked || 0;
   S.served = data.served || 0;
   S.clock = data.clock || 0;
   S.level = data.level || 1;
@@ -1611,7 +1663,7 @@ function resetGame() {
   S.money = 0;
   S.swordLevel = 0;
   S.bagLevel = 0;
-  S.stock = { wood: 0, meat: 0 };
+  S.stock = { wood: 0, meat: 0, cooked: 0 };
   S.cookQueue = 0;
   S.served = 0;
   S.hp = maxHp();
@@ -1636,8 +1688,9 @@ function resetGame() {
   shockwave.visible = false;
   slash.material.opacity = 0;
   slashGhost.material.opacity = 0;
-  S.carry.length = 0;
-  while (carryMeshes.length) player.userData.carry.remove(carryMeshes.pop());
+  S.carry.wood = 0;
+  S.carry.meat = 0;
+  syncCarry();
 
   for (const w of workers) scene.remove(w);
   workers.length = 0;
@@ -1710,8 +1763,8 @@ function frame(now) {
     }
     updateActionUi();
     updateMinimap(dt);
-    hud.setCarry(S.carry.length, carryCap());
-    hud.setStock(S.stock.wood, S.stock.meat);
+    hud.setCarry(S.carry.wood, S.carry.meat, carryCap());
+    hud.setStock(S.stock.wood, S.stock.meat + S.stock.cooked);
     hud.tick(dt);
   }
 
@@ -1727,7 +1780,7 @@ plantTrees();
 hud.setMoney(0);
 hud.setHp(1);
 hud.setSwordLevel(0);
-hud.setCarry(0, carryCap());
+hud.setCarry(0, 0, carryCap());
 hud.setStock(0, 0);
 hud.setLevel(1, 0, xpNeed(1));
 for (const p of pads) refreshPad(p);

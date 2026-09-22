@@ -75,7 +75,7 @@ export const CFG = {
     ],
   },
 
-  goods: { woodPrice: 14, meatPrice: 24 },
+  goods: { woodPrice: 14, meatPrice: 16, cookedPrice: 30 },
   grill: { cookTime: 0.6, queueMax: 30 },
   stall: { stockMax: 60, depositRate: 0.09 },
   buyer: { interval: 4.5, maxQueue: 4, wantMin: 2, wantMax: 5, speed: 2.4, serveTime: 0.9 },

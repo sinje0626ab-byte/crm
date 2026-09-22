@@ -5,7 +5,9 @@ export function createHud() {
     moneyPill: document.getElementById('money-pill'),
     wood: document.getElementById('stock-wood'),
     meat: document.getElementById('stock-meat'),
-    carry: document.getElementById('carry'),
+    carryWood: document.getElementById('carry-wood'),
+    carryMeat: document.getElementById('carry-meat'),
+    carryCap: document.getElementById('carry-cap'),
     carryWrap: document.getElementById('carry-wrap'),
     hpFill: document.getElementById('hp-fill'),
     sword: document.getElementById('sword-lv'),
@@ -55,11 +57,15 @@ export function createHud() {
       el.wood.textContent = wood;
       el.meat.textContent = meat;
     },
-    setCarry(n, cap) {
-      const full = n >= cap;
-      el.carry.textContent = full ? 'FULL' : `${n}/${cap}`;
-      el.carryWrap.classList.toggle('full', full);
-      el.carryWrap.classList.toggle('hidden', n === 0);
+    // 나무와 고기를 따로 표시한다
+    setCarry(wood, meat, cap) {
+      el.carryWood.textContent = wood;
+      el.carryMeat.textContent = meat;
+      el.carryCap.textContent = `/${cap}`;
+      el.carryWood.classList.toggle('num-full', wood >= cap);
+      el.carryMeat.classList.toggle('num-full', meat >= cap);
+      el.carryWrap.classList.toggle('full', wood >= cap || meat >= cap);
+      el.carryWrap.classList.toggle('hidden', wood === 0 && meat === 0);
     },
     setHp(ratio) {
       const r = Math.max(0, Math.min(1, ratio));
