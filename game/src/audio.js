@@ -127,10 +127,68 @@ export const Audio = (() => {
     full() { tone(330, 0.1, 'square', 0.18); setTimeout(() => tone(247, 0.14, 'square', 0.18), 110); },
     buyerCome() { tone(587, 0.09, 'sine', 0.14, 784); },
 
+    // 아케이드 타이쿤용
+    stackUp() { throttled('su', 60, () => tone(660, 0.05, 'triangle', 0.18, 880)); },
+    unload() { throttled('ul', 90, () => tone(420, 0.06, 'sine', 0.16, 300)); },
+    register() { tone(1318, 0.06, 'sine', 0.22, 1760); setTimeout(() => tone(1760, 0.1, 'sine', 0.18), 70); },
+    unlock() { [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.2, 'triangle', 0.3), i * 70)); },
+    zoneTick() { throttled('zt', 55, () => tone(980, 0.04, 'square', 0.1, 1240)); },
+
     // UI
     ui() { tone(880, 0.04, 'sine', 0.16, 1200); },
     start() { [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.22, 'triangle', 0.26), i * 90)); },
   };
+
+  // YJ GAMES 로고와 함께 흐르는 짧은 징글
+  function logoJingle() {
+    ensure();
+    resume();
+    if (!ctx || muted) return false;
+    const t0 = ctx.currentTime + 0.05;
+    const notes = [
+      [0.00, 523.25, 0.55],
+      [0.16, 659.25, 0.55],
+      [0.32, 783.99, 0.6],
+      [0.48, 1046.50, 0.75],
+      [0.78, 1318.51, 0.9],
+    ];
+    for (const [at, freq, dur] of notes) {
+      for (const [type, vol, detune] of [['triangle', 0.16, 0], ['sine', 0.1, 6]]) {
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type = type;
+        o.frequency.value = freq;
+        o.detune.value = detune;
+        g.gain.setValueAtTime(0.0001, t0 + at);
+        g.gain.exponentialRampToValueAtTime(vol, t0 + at + 0.03);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + at + dur);
+        o.connect(g);
+        g.connect(musicBus);
+        o.start(t0 + at);
+        o.stop(t0 + at + dur + 0.05);
+      }
+    }
+    // 아래를 받치는 부드러운 패드
+    const pad = ctx.createOscillator();
+    const padG = ctx.createGain();
+    const lp = ctx.createBiquadFilter();
+    pad.type = 'triangle';
+    pad.frequency.value = 130.81;
+    lp.type = 'lowpass';
+    lp.frequency.value = 700;
+    padG.gain.setValueAtTime(0.0001, t0);
+    padG.gain.linearRampToValueAtTime(0.09, t0 + 0.4);
+    padG.gain.linearRampToValueAtTime(0.0001, t0 + 2.2);
+    pad.connect(lp);
+    lp.connect(padG);
+    padG.connect(musicBus);
+    pad.start(t0);
+    pad.stop(t0 + 2.3);
+
+    // 반짝이는 잔향
+    setTimeout(() => noise(0.5, 0.06, 5200, 0.5), 780);
+    return ctx.state === 'running';
+  }
 
   /* --------------------------------------------------- 배경음(겨울 앰비언트) */
   // 느린 단조 패드 + 드문드문 울리는 종소리 + 바람. 루프 파일 없이 스케줄링한다.
@@ -255,6 +313,7 @@ export const Audio = (() => {
     // 디버그/테스트용: 실제로 소리가 나가는지 파형을 들여다볼 수 있게 한다
     _debug: { get ctx() { return ctx; }, get master() { return master; } },
     frameReset() { voices = 0; },
+    logoJingle,
     musicStart,
     musicStop,
     setMusicVolume(v) { if (musicBus) musicBus.gain.value = v; },

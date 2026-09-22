@@ -6,6 +6,9 @@ WOS(화이트아웃 서바이벌) 광고에 나오는 **설원 아이들 타이�
 
 **주소:** https://sinje0626ab-byte.github.io/crm/game/
 
+> 광고 영상 그대로의 아케이드 타이쿤 판은 따로 있습니다 →
+> [설원 바베큐 타이쿤](arcade/README.md) (`/crm/game/arcade/`)
+
 ## 흐름
 
 YJ GAMES 인트로 → 메인 메뉴(이어하기 / 새 게임) → 게임 → ☰ 버튼이나 `ESC` 로
