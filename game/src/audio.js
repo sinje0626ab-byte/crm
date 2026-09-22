@@ -108,6 +108,7 @@ export const Audio = (() => {
       [880, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.24, 'triangle', 0.2, f * 1.2), i * 55));
     },
     skillReady() { tone(784, 0.1, 'sine', 0.16, 1046); },
+    levelup() { [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.26, 'triangle', 0.3), i * 85)); },
     hurt() {
       tone(165, 0.16, 'sawtooth', 0.4, 58);
       tone(90, 0.22, 'triangle', 0.3, 42);

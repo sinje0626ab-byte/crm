@@ -13,14 +13,10 @@ export function createHud() {
     dayNum: document.getElementById('day-num'),
     dayIcon: document.getElementById('day-icon'),
     btnAttack: document.getElementById('btn-attack'),
-    btnSkill: document.getElementById('btn-skill'),
-    skillCd: document.getElementById('skill-cd'),
-    skillSec: document.getElementById('skill-sec'),
     keyA: document.getElementById('key-a'),
-    keyS: document.getElementById('key-s'),
-    keyCd: document.querySelector('#key-s .cd'),
-    keySec: document.querySelector('#key-s .sec'),
     minimap: document.getElementById('minimap-wrap'),
+    lvChip: document.getElementById('lv-chip'),
+    xpFill: document.getElementById('xp-fill'),
     toast: document.getElementById('toast'),
     hint: document.getElementById('hint'),
     damage: document.getElementById('damage-flash'),
@@ -28,13 +24,20 @@ export function createHud() {
 
   let toastTimer = 0;
   let money = 0;
-  let wasCooling = false;
 
-  function flashReady() {
-    for (const el2 of [el.btnSkill, el.keyS]) {
-      el2.classList.remove('ready-flash');
-      void el2.offsetWidth;
-      el2.classList.add('ready-flash');
+  // 스킬별 버튼(모바일)과 키캡(PC)을 한 묶음으로 다룬다
+  const skillUi = {};
+  for (const node of document.querySelectorAll('[data-skill]')) {
+    const id = node.dataset.skill;
+    if (!skillUi[id]) skillUi[id] = { nodes: [], cooling: false };
+    skillUi[id].nodes.push(node);
+  }
+
+  function flashReady(id) {
+    for (const node of skillUi[id].nodes) {
+      node.classList.remove('ready-flash');
+      void node.offsetWidth;
+      node.classList.add('ready-flash');
     }
   }
 
@@ -68,33 +71,46 @@ export function createHud() {
       el.day.classList.toggle('night', night);
       el.dayIcon.classList.toggle('moon', night);
     },
-    // A(공격) 가능 여부와 S(스킬) 쿨타임 표시
-    // remain = 남은 쿨타임(초), total = 전체 쿨타임(초)
-    setActions(canAttack, skillReady, remain, total) {
+    // A(공격) 가능 여부
+    setAttack(canAttack) {
       el.btnAttack.classList.toggle('dim', !canAttack);
       el.keyA.classList.toggle('dim', !canAttack);
+    },
+    // 스킬별 보유 여부·레벨·쿨타임 표시
+    setSkills(list) {
+      for (const sk of list) {
+        const ui = skillUi[sk.id];
+        if (!ui) continue;
+        const ratio = sk.total > 0 ? Math.max(0, Math.min(1, sk.remain / sk.total)) : 0;
+        const cooling = sk.owned && sk.remain > 0.01;
 
-      const ratio = total > 0 ? Math.max(0, Math.min(1, remain / total)) : 0;
-      const cooling = remain > 0.01;
-
-      el.btnSkill.classList.toggle('dim', cooling);
-      el.btnSkill.classList.toggle('cooling', cooling);
-      el.skillCd.style.setProperty('--cd', `${ratio * 360}deg`);
-      el.skillSec.textContent = cooling ? Math.ceil(remain) : '';
-
-      el.keyS.classList.toggle('dim', cooling);
-      el.keyS.classList.toggle('cooling', cooling);
-      el.keyCd.style.height = `${ratio * 100}%`;
-      el.keySec.textContent = cooling ? Math.ceil(remain) : '';
-
-      if (wasCooling && !cooling) flashReady();
-      wasCooling = cooling;
+        for (const node of ui.nodes) {
+          node.classList.toggle('off', !sk.owned);
+          if (!sk.owned) continue;
+          node.classList.toggle('dim', cooling);
+          node.classList.toggle('cooling', cooling);
+          const arc = node.querySelector('.cd-arc');
+          if (arc) arc.style.setProperty('--cd', `${ratio * 360}deg`);
+          const bar = node.querySelector('.cd');
+          if (bar) bar.style.height = `${ratio * 100}%`;
+          const sec = node.querySelector('.cd-sec, .sec');
+          if (sec) sec.textContent = cooling ? Math.ceil(sk.remain) : '';
+          const badge = node.querySelector('.lv-badge');
+          if (badge) badge.textContent = sk.level;
+        }
+        if (sk.owned && ui.cooling && !cooling) flashReady(sk.id);
+        ui.cooling = cooling;
+      }
+    },
+    setLevel(level, xp, need) {
+      el.lvChip.textContent = `Lv.${level}`;
+      el.xpFill.style.width = `${need > 0 ? Math.max(0, Math.min(1, xp / need)) * 100 : 100}%`;
     },
     setMinimap(visible) {
       el.minimap.classList.toggle('show', visible);
     },
     setSwordLevel(lv) {
-      el.sword.textContent = `Lv.${lv + 1}`;
+      el.sword.textContent = `검 Lv.${lv + 1}`;
     },
     flashDamage() {
       el.damage.classList.remove('on');

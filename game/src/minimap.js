@@ -66,8 +66,12 @@ export function createMinimap(canvas) {
       for (const p of pickups) {
         dot(p.mesh.position.x, p.mesh.position.z, 1.5, p.type === 'wood' ? '#d2a273' : '#e2564d');
       }
-      // 야수
-      for (const b of bears) dot(b.mesh.position.x, b.mesh.position.z, 2.4, '#ff5a4e');
+      // 야수(등급별로 색과 크기가 다르다)
+      const TIER_COLOR = ['#ff5a4e', '#ffa64d', '#d76bff'];
+      for (const b of bears) {
+        const t = b.tier ? b.tier.id : 0;
+        dot(b.mesh.position.x, b.mesh.position.z, 2.2 + t * 0.9, TIER_COLOR[t] || '#ff5a4e');
+      }
       // 손님
       for (const b of buyers) dot(b.mesh.position.x, b.mesh.position.z, 2, '#7fc4ff');
 

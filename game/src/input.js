@@ -7,28 +7,31 @@ export function createInput(surface, joyEl, knobEl) {
   let touchId = null;
   let origin = { x: 0, y: 0 };
 
-  // 버튼/키 눌림 상태
-  const action = { attack: false, skill: false };
-  const pressedOnce = { attack: false, skill: false };
+  // 버튼/키 눌림 상태 (A=공격, S/D/F=스킬)
+  const KEY_ACTION = { KeyA: 'attack', KeyS: 'whirl', KeyD: 'charge', KeyF: 'frost' };
+  const action = { attack: false, whirl: false, charge: false, frost: false };
+  const pressedOnce = { attack: false, whirl: false, charge: false, frost: false };
 
   addEventListener('keydown', (e) => {
     if (e.repeat) return;
     keys.add(e.code);
-    if (e.code === 'KeyA') { action.attack = true; pressedOnce.attack = true; }
-    if (e.code === 'KeyS') { action.skill = true; pressedOnce.skill = true; }
-    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space', 'KeyA', 'KeyS'].includes(e.code)) {
+    const a = KEY_ACTION[e.code];
+    if (a) {
+      action[a] = true;
+      pressedOnce[a] = true;
+    }
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code) || a) {
       e.preventDefault();
     }
   });
   addEventListener('keyup', (e) => {
     keys.delete(e.code);
-    if (e.code === 'KeyA') action.attack = false;
-    if (e.code === 'KeyS') action.skill = false;
+    const a = KEY_ACTION[e.code];
+    if (a) action[a] = false;
   });
   addEventListener('blur', () => {
     keys.clear();
-    action.attack = false;
-    action.skill = false;
+    for (const k of Object.keys(action)) action[k] = false;
   });
 
   /* ------------------------------------------------------------ 조이스틱 */
@@ -101,9 +104,10 @@ export function createInput(surface, joyEl, knobEl) {
   }
 
   return {
-    bindButtons(attackEl, skillEl) {
+    // 공격 버튼 + data-skill 을 가진 스킬 버튼들을 연결한다
+    bindButtons(attackEl, skillEls) {
       bindButton(attackEl, 'attack');
-      bindButton(skillEl, 'skill');
+      for (const el of skillEls) bindButton(el, el.dataset.skill);
     },
     // 월드 기준 이동 방향(-1..1)
     read() {

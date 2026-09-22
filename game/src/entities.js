@@ -183,17 +183,36 @@ export function makeSparks(count = 14) {
 }
 
 // 스킬(회전베기)용 확산 충격파
-export function makeShockwave() {
+export function makeShockwave(color = 0xbfe6ff) {
   const m = new THREE.Mesh(
     new THREE.RingGeometry(0.85, 1, 40),
     new THREE.MeshBasicMaterial({
-      color: 0xbfe6ff, transparent: true, opacity: 0,
+      color, transparent: true, opacity: 0,
       depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
     }),
   );
   m.rotation.x = -Math.PI / 2;
   m.renderOrder = 4;
   return m;
+}
+
+// 서리폭발용 얼음 파편 고리
+export function makeFrostShards(count = 12, radius = 4) {
+  const g = new THREE.Group();
+  const geo = new THREE.ConeGeometry(0.28, 1.1, 4);
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    const shard = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
+      color: 0x9fd8ff, flatShading: true, transparent: true, opacity: 0.9,
+      emissive: 0x2c6b9c,
+    }));
+    shard.position.set(Math.cos(a) * radius, 0.6, Math.sin(a) * radius);
+    shard.rotation.z = (Math.random() - 0.5) * 0.5;
+    shard.rotation.x = (Math.random() - 0.5) * 0.5;
+    g.add(shard);
+  }
+  g.visible = false;
+  return g;
 }
 
 /* --------------------------------------------------------------- 밤 요소 */
@@ -209,7 +228,7 @@ export function makeHandTorch() {
   const flame = mesh(new THREE.ConeGeometry(0.19, 0.5, 5), COLORS.ember, { emissive: 0xff8a2b });
   flame.position.y = 0.8;
   g.add(flame);
-  const light = new THREE.PointLight(0xffa64d, 0, 16, 2);
+  const light = new THREE.PointLight(0xffb066, 0, 34, 2);
   light.position.y = 0.85;
   g.add(light);
   g.userData.flame = flame;
@@ -239,24 +258,26 @@ export function makeStars(count = 260, radius = 120) {
 
 /* ==================================================================== 곰 */
 
-export function makeBear() {
+export function makeBear(tier = {}) {
   const g = new THREE.Group();
+  const main = tier.color ?? COLORS.bear;
+  const dark = tier.shade ?? COLORS.bearShade;
 
-  const body = mesh(new THREE.CapsuleGeometry(0.72, 1.5, 4, 8), COLORS.bear);
+  const body = mesh(new THREE.CapsuleGeometry(0.72, 1.5, 4, 8), main);
   body.rotation.x = Math.PI / 2;
   body.position.y = 1.18;
   g.add(body);
 
-  const hump = mesh(new THREE.SphereGeometry(0.5, 7, 5), COLORS.bear);
+  const hump = mesh(new THREE.SphereGeometry(0.5, 7, 5), main);
   hump.scale.set(1, 0.6, 1.2);
   hump.position.set(0, 1.62, 0.35);
   g.add(hump);
 
-  const head = mesh(new THREE.SphereGeometry(0.56, 8, 6), COLORS.bear);
+  const head = mesh(new THREE.SphereGeometry(0.56, 8, 6), main);
   head.position.set(0, 1.34, 1.28);
   g.add(head);
 
-  const snout = mesh(new THREE.BoxGeometry(0.36, 0.28, 0.4), COLORS.bearShade);
+  const snout = mesh(new THREE.BoxGeometry(0.36, 0.28, 0.4), dark);
   snout.position.set(0, 1.16, 1.72);
   g.add(snout);
 
@@ -266,7 +287,7 @@ export function makeBear() {
 
   const earGeo = new THREE.SphereGeometry(0.16, 6, 5);
   for (const s of [-1, 1]) {
-    const ear = mesh(earGeo, COLORS.bearShade);
+    const ear = mesh(earGeo, dark);
     ear.position.set(0.33 * s, 1.76, 1.08);
     g.add(ear);
   }
@@ -275,19 +296,20 @@ export function makeBear() {
   const legs = [];
   for (const x of [-0.52, 0.52]) {
     for (const z of [-0.62, 0.66]) {
-      const leg = mesh(legGeo, COLORS.bearShade);
+      const leg = mesh(legGeo, dark);
       leg.position.set(x, 0.39, z);
       legs.push(leg);
       g.add(leg);
     }
   }
 
-  const tail = mesh(new THREE.SphereGeometry(0.19, 6, 5), COLORS.bear);
+  const tail = mesh(new THREE.SphereGeometry(0.19, 6, 5), main);
   tail.position.set(0, 1.25, -1.45);
   g.add(tail);
 
-  g.scale.setScalar(1.22);
+  g.scale.setScalar(tier.scale ?? 1.22);
   g.userData.parts = { body, head, legs };
+  g.userData.tier = tier.id ?? 0;
   return g;
 }
 

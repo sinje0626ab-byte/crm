@@ -98,7 +98,21 @@
   .act-btn small { position: absolute; bottom: 9px; font-size: 10px; opacity: 0.8; letter-spacing: 0.06em; }
   .act-btn.down { transform: scale(0.92); }
   .act-btn.dim { opacity: 0.45; }
-  #btn-skill { background: linear-gradient(#a7d8ff, #4a90c8); }
+  .skill-btn { background: linear-gradient(#a7d8ff, #4a90c8); width: 66px; height: 66px; font-size: 22px; }
+  .skill-btn .cd-arc {
+    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(rgba(8, 15, 24, 0.66) var(--cd, 0deg), transparent 0);
+  }
+  .skill-btn .cd-sec {
+    position: absolute; inset: 0; display: none; place-items: center;
+    font-size: 21px; font-weight: bold; color: #eaf3ff; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+  .skill-btn.cooling .cd-sec { display: grid; }
+  .lv-badge {
+    position: absolute; top: -3px; right: -3px; min-width: 20px; padding: 1px 5px;
+    font-size: 11px; font-weight: bold; color: #22190a; background: #ffd98a;
+    border-radius: 999px; box-shadow: 0 2px 5px rgba(0,0,0,.4);
+  }
   /* 스킬 쿨타임: 원형으로 줄어드는 어두운 부채꼴 + 남은 초 */
   #skill-cd {
     position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
@@ -154,6 +168,42 @@
   }
   .key-cap.cooling .sec { display: grid; }
   .key-cap.ready-flash { animation: readyPop 0.45s ease-out; }
+
+  .off { display: none !important; }
+
+  /* 경험치 바 + 레벨 */
+  #xp-wrap { display: flex; align-items: center; gap: 7px; }
+  #lv-chip {
+    padding: 3px 9px; font-size: 12px; font-weight: bold; color: #22190a;
+    background: linear-gradient(#f0d489, #c9a24a); border-radius: 999px;
+  }
+  #xp-bar { width: 118px; height: 9px; padding: 2px; }
+  #xp-fill { height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, #7fd0ff, #4a90c8); transition: width 0.25s; }
+
+  /* 레벨업 카드 선택 */
+  #levelup {
+    position: fixed; inset: 0; z-index: 26; display: grid; place-items: center;
+    background: rgba(6, 12, 18, 0.82); transition: opacity 0.25s;
+  }
+  #lv-panel { width: min(760px, 94vw); padding: 20px 16px; text-align: center; }
+  #lv-title { margin: 0 0 4px; font-size: 24px; }
+  #lv-sub { margin: 0 0 16px; font-size: 13px; opacity: 0.7; }
+  #lv-cards { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .lv-card {
+    pointer-events: auto; flex: 1 1 200px; max-width: 240px; padding: 16px 14px;
+    background: rgba(255, 255, 255, 0.05); border: 2px solid var(--gold-soft);
+    border-radius: 14px; cursor: pointer; transition: transform 0.1s, border-color 0.2s, background 0.2s;
+  }
+  .lv-card:hover, .lv-card:active { transform: translateY(-3px); border-color: var(--gold); background: rgba(201, 162, 74, 0.14); }
+  .lv-card .tag {
+    display: inline-block; padding: 2px 9px; margin-bottom: 8px; font-size: 11px; font-weight: bold;
+    border-radius: 999px; color: #22190a; background: #c9a24a;
+  }
+  .lv-card .tag.up { background: #7fd0ff; }
+  .lv-card h3 { margin: 4px 0 6px; font-size: 19px; }
+  .lv-card p { margin: 0; font-size: 12px; line-height: 1.5; opacity: 0.78; }
+  .lv-card .eff { margin-top: 9px; font-size: 12px; font-weight: bold; color: #ffd98a; }
 
   #hint {
     position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom));
@@ -279,7 +329,21 @@
   .act-btn small { position: absolute; bottom: 9px; font-size: 10px; opacity: 0.8; letter-spacing: 0.06em; }
   .act-btn.down { transform: scale(0.92); }
   .act-btn.dim { opacity: 0.45; }
-  #btn-skill { background: linear-gradient(#a7d8ff, #4a90c8); }
+  .skill-btn { background: linear-gradient(#a7d8ff, #4a90c8); width: 66px; height: 66px; font-size: 22px; }
+  .skill-btn .cd-arc {
+    position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
+    background: conic-gradient(rgba(8, 15, 24, 0.66) var(--cd, 0deg), transparent 0);
+  }
+  .skill-btn .cd-sec {
+    position: absolute; inset: 0; display: none; place-items: center;
+    font-size: 21px; font-weight: bold; color: #eaf3ff; text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+  }
+  .skill-btn.cooling .cd-sec { display: grid; }
+  .lv-badge {
+    position: absolute; top: -3px; right: -3px; min-width: 20px; padding: 1px 5px;
+    font-size: 11px; font-weight: bold; color: #22190a; background: #ffd98a;
+    border-radius: 999px; box-shadow: 0 2px 5px rgba(0,0,0,.4);
+  }
   /* 스킬 쿨타임: 원형으로 줄어드는 어두운 부채꼴 + 남은 초 */
   #skill-cd {
     position: absolute; inset: 0; border-radius: 50%; pointer-events: none;
@@ -336,6 +400,42 @@
   .key-cap.cooling .sec { display: grid; }
   .key-cap.ready-flash { animation: readyPop 0.45s ease-out; }
 
+  .off { display: none !important; }
+
+  /* 경험치 바 + 레벨 */
+  #xp-wrap { display: flex; align-items: center; gap: 7px; }
+  #lv-chip {
+    padding: 3px 9px; font-size: 12px; font-weight: bold; color: #22190a;
+    background: linear-gradient(#f0d489, #c9a24a); border-radius: 999px;
+  }
+  #xp-bar { width: 118px; height: 9px; padding: 2px; }
+  #xp-fill { height: 100%; width: 0%; border-radius: 999px;
+    background: linear-gradient(90deg, #7fd0ff, #4a90c8); transition: width 0.25s; }
+
+  /* 레벨업 카드 선택 */
+  #levelup {
+    position: fixed; inset: 0; z-index: 26; display: grid; place-items: center;
+    background: rgba(6, 12, 18, 0.82); transition: opacity 0.25s;
+  }
+  #lv-panel { width: min(760px, 94vw); padding: 20px 16px; text-align: center; }
+  #lv-title { margin: 0 0 4px; font-size: 24px; }
+  #lv-sub { margin: 0 0 16px; font-size: 13px; opacity: 0.7; }
+  #lv-cards { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .lv-card {
+    pointer-events: auto; flex: 1 1 200px; max-width: 240px; padding: 16px 14px;
+    background: rgba(255, 255, 255, 0.05); border: 2px solid var(--gold-soft);
+    border-radius: 14px; cursor: pointer; transition: transform 0.1s, border-color 0.2s, background 0.2s;
+  }
+  .lv-card:hover, .lv-card:active { transform: translateY(-3px); border-color: var(--gold); background: rgba(201, 162, 74, 0.14); }
+  .lv-card .tag {
+    display: inline-block; padding: 2px 9px; margin-bottom: 8px; font-size: 11px; font-weight: bold;
+    border-radius: 999px; color: #22190a; background: #c9a24a;
+  }
+  .lv-card .tag.up { background: #7fd0ff; }
+  .lv-card h3 { margin: 4px 0 6px; font-size: 19px; }
+  .lv-card p { margin: 0; font-size: 12px; line-height: 1.5; opacity: 0.78; }
+  .lv-card .eff { margin-top: 9px; font-size: 12px; font-weight: bold; color: #ffd98a; }
+
   #hint { font-size: 12px; }
   }
 </style>
@@ -360,8 +460,12 @@
     </div>
     <div id="vitals">
       <div id="hp-bar" class="panel"><div id="hp-fill"></div></div>
+      <div id="xp-wrap">
+        <span id="lv-chip">Lv.1</span>
+        <div id="xp-bar" class="panel"><div id="xp-fill"></div></div>
+      </div>
       <div id="carry-wrap" class="panel hidden"><span class="dot"></span><span id="carry">0/10</span></div>
-      <div id="sword-lv">Lv.1</div>
+      <div id="sword-lv">검 Lv.1</div>
     </div>
   </div>
 
@@ -374,12 +478,16 @@
 
   <div id="action-pad">
     <div id="btn-attack" class="act-btn">A<small>공격</small></div>
-    <div id="btn-skill" class="act-btn">S<small>스킬</small><div id="skill-cd"></div><div id="skill-sec"></div></div>
+    <div class="act-btn skill-btn off" data-skill="whirl">S<small>회전</small><div class="cd-arc"></div><div class="cd-sec"></div><span class="lv-badge">1</span></div>
+    <div class="act-btn skill-btn off" data-skill="charge">D<small>돌진</small><div class="cd-arc"></div><div class="cd-sec"></div><span class="lv-badge">1</span></div>
+    <div class="act-btn skill-btn off" data-skill="frost">F<small>서리</small><div class="cd-arc"></div><div class="cd-sec"></div><span class="lv-badge">1</span></div>
   </div>
 
   <div id="key-hints">
     <div id="key-a" class="key-cap">A<small>공격</small></div>
-    <div id="key-s" class="key-cap skill">S<small>스킬</small><i class="cd"></i><b class="sec"></b></div>
+    <div class="key-cap skill off" data-skill="whirl">S<small>회전</small><i class="cd"></i><b class="sec"></b></div>
+    <div class="key-cap skill off" data-skill="charge">D<small>돌진</small><i class="cd"></i><b class="sec"></b></div>
+    <div class="key-cap skill off" data-skill="frost">F<small>서리</small><i class="cd"></i><b class="sec"></b></div>
   </div>
 
   <div id="minimap-wrap" class="panel">
@@ -402,6 +510,14 @@
     <button id="btn-continue" class="btn">이어하기</button>
     <button id="btn-new" class="btn ghost">새 게임</button>
     <p id="save-info" class="note">저장된 기록이 없습니다</p>
+  </div>
+</div>
+
+<div id="levelup" class="hidden">
+  <div id="lv-panel" class="panel">
+    <h2 id="lv-title">레벨 업!</h2>
+    <p id="lv-sub">하나를 고르세요</p>
+    <div id="lv-cards"></div>
   </div>
 </div>
 
