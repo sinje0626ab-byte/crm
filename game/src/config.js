@@ -64,6 +64,8 @@ export const CFG = {
   bear: {
     aggro: 13, atkRange: 2.7, atkCd: 1.6,
     maxAlive: 20, spawnCd: 1.1, knockback: 2.2,
+    // 밤에는 더 많이, 더 자주, 가끔 한 등급 위로 나온다
+    night: { maxAliveMul: 1.7, spawnMul: 0.5, tierUpChance: 0.28 },
     // 정착지에서 멀어질수록 더 강한 놈이 나온다(깊이 = 정착지 중심까지 거리)
     tiers: [
       { id: 0, name: '북극곰', hp: 110, dmg: 9, speed: 3.4, scale: 1.22,

@@ -896,7 +896,11 @@ function spawnBear(atX, atZ) {
   const x = atX ?? (near ? near[0] : region.x0 + Math.random() * (region.x1 - region.x0));
   const z = atZ ?? (near ? near[1] : region.z0 + Math.random() * (region.z1 - region.z0));
   const depth = Math.hypot(x - C.x, z - C.z);
-  const tier = tierForDepth(depth);
+  let tier = tierForDepth(depth);
+  // 밤에는 가끔 한 등급 위의 놈이 내려온다
+  if (S.night && Math.random() < CFG.bear.night.tierUpChance) {
+    tier = CFG.bear.tiers[Math.min(CFG.bear.tiers.length - 1, tier.id + 1)];
+  }
 
   const g = makeBear(tier);
   g.position.set(x, 0.35, z);
@@ -928,10 +932,12 @@ function hurtBear(b, dmg) {
 }
 
 function updateBears(dt) {
+  const night = CFG.bear.night;
+  const maxAlive = Math.round(CFG.bear.maxAlive * (S.night ? night.maxAliveMul : 1));
   S.spawnTimer -= dt;
-  if (S.spawnTimer <= 0 && bears.length < CFG.bear.maxAlive) {
+  if (S.spawnTimer <= 0 && bears.length < maxAlive) {
     spawnBear();
-    S.spawnTimer = CFG.bear.spawnCd;
+    S.spawnTimer = CFG.bear.spawnCd * (S.night ? night.spawnMul : 1);
   }
 
   for (const b of bears) {
@@ -1744,6 +1750,34 @@ hud.setStock(0, 0);
 hud.setLevel(1, 0, xpNeed(1));
 for (const p of pads) refreshPad(p);
 
+// 아이템창에 보여줄 값 모음
+function inventoryData() {
+  return {
+    level: S.level,
+    xp: Math.floor(S.xp),
+    xpNeed: xpNeed(S.level),
+    hp: Math.round(S.hp),
+    maxHp: maxHp(),
+    swordDamage: swordDamage(),
+    speedBonus: Math.round(S.bonus.speed * 100),
+    carry: { ...S.carry },
+    cap: carryCap(),
+    money: Math.floor(S.money),
+    stock: { ...S.stock },
+    cooking: S.cookQueue,
+    workers: workers.length,
+    towers: towers.filter((t) => t.visible).length,
+    bagLevel: S.bagLevel,
+    swordLevel: S.swordLevel,
+    skills: SKILL_IDS.map((id) => ({
+      name: CFG.skills[id].name, key: CFG.skills[id].key, level: S.skills[id],
+    })),
+    day: S.day,
+    night: S.night,
+    served: S.served,
+  };
+}
+
 createMenu({
   onNew() {
     clearSave();
@@ -1760,6 +1794,7 @@ createMenu({
   onPause() { S.running = false; },
   onResume() { S.running = true; },
   onSave() { return saveGame(); },
+  onInventory() { return inventoryData(); },
   onQuit() { S.running = false; },
 });
 

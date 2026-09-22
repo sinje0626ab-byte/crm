@@ -77,10 +77,89 @@ export function createMenu(handlers) {
   continueBtn.addEventListener('click', () => beginGame(handlers.onContinue));
 
   const levelup = el('levelup');
+  const inventory = el('inventory');
+  const invBody = el('inv-body');
   const isPaused = () => !pause.classList.contains('hidden');
-  // 메뉴나 레벨업 카드가 떠 있으면 일시정지를 건드리지 않는다
-  const canPause = () =>
+  const isInvOpen = () => !inventory.classList.contains('hidden');
+  // 메뉴나 레벨업 카드가 떠 있으면 일시정지·아이템창을 건드리지 않는다
+  const inGame = () =>
     menu.classList.contains('hidden') && levelup.classList.contains('hidden');
+  const canPause = () => inGame() && !isInvOpen();
+
+  /* ------------------------------------------------------------ 아이템창 */
+  function fillInventory(d) {
+    invBody.textContent = '';
+    const sec = (title, rows) => {
+      const box = document.createElement('div');
+      box.className = 'inv-sec';
+      const h = document.createElement('h3');
+      h.textContent = title;
+      box.appendChild(h);
+      for (const [label, value, cls] of rows) {
+        const row = document.createElement('div');
+        row.className = 'inv-row';
+        const l = document.createElement('span');
+        l.textContent = label;
+        const v = document.createElement('b');
+        v.textContent = value;
+        if (cls) v.className = cls;
+        row.append(l, v);
+        box.appendChild(row);
+      }
+      invBody.appendChild(box);
+    };
+
+    sec('생존자', [
+      ['레벨', `Lv.${d.level}`],
+      ['경험치', `${d.xp} / ${d.xpNeed}`],
+      ['체력', `${d.hp} / ${d.maxHp}`],
+      ['검 피해', `${d.swordDamage}`],
+      ['이동 속도', d.speedBonus ? `+${d.speedBonus}%` : '기본', d.speedBonus ? '' : 'off'],
+    ]);
+    sec('소지품', [
+      ['나무', `${d.carry.wood} / ${d.cap}`, d.carry.wood >= d.cap ? 'hot' : ''],
+      ['고기', `${d.carry.meat} / ${d.cap}`, d.carry.meat >= d.cap ? 'hot' : ''],
+      ['돈', `$ ${d.money.toLocaleString('ko-KR')}`],
+    ]);
+    sec('판매대 재고', [
+      ['통나무', `${d.stock.wood}`],
+      ['구운 고기', `${d.stock.meat}`],
+      ['화로에서 굽는 중', `${d.cooking}`, d.cooking ? 'hot' : 'off'],
+    ]);
+    sec('시설 · 장비', [
+      ['검', `Lv.${d.swordLevel + 1}`],
+      ['가방', `Lv.${d.bagLevel + 1} (최대 ${d.cap})`],
+      ['일꾼', `${d.workers} 명`, d.workers ? '' : 'off'],
+      ['궁수 망루', `${d.towers} 기`, d.towers ? '' : 'off'],
+    ]);
+    sec('스킬', d.skills.map((sk) => [
+      `${sk.name} (${sk.key})`,
+      sk.level ? `Lv.${sk.level}` : '미습득',
+      sk.level ? '' : 'off',
+    ]));
+    sec('기록', [
+      ['날짜', `${d.day}일차 ${d.night ? '밤' : '낮'}`],
+      ['판매한 손님', `${d.served} 명`],
+    ]);
+  }
+
+  function openInventory() {
+    if (!inGame() || isInvOpen() || isPaused()) return;
+    Audio.S.ui();
+    fillInventory(handlers.onInventory());
+    inventory.classList.remove('hidden');
+    handlers.onPause();
+  }
+
+  function closeInventory() {
+    if (!isInvOpen()) return;
+    Audio.S.ui();
+    inventory.classList.add('hidden');
+    handlers.onResume();
+  }
+
+  el('btn-items').addEventListener('click', openInventory);
+  el('btn-inv-close').addEventListener('click', closeInventory);
 
   function openPause() {
     if (!canPause() || isPaused()) return;
@@ -103,12 +182,18 @@ export function createMenu(handlers) {
   el('btn-pause').addEventListener('click', openPause);
   el('btn-resume').addEventListener('click', closePause);
 
-  // PC: ESC 로 일시정지를 여닫는다
+  // PC: ESC 로 일시정지, I 로 아이템창
   addEventListener('keydown', (e) => {
-    if (e.code !== 'Escape') return;
-    e.preventDefault();
-    if (isPaused()) closePause();
-    else openPause();
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      if (isInvOpen()) closeInventory();
+      else if (isPaused()) closePause();
+      else openPause();
+    } else if (e.code === 'KeyI') {
+      e.preventDefault();
+      if (isInvOpen()) closeInventory();
+      else openInventory();
+    }
   });
 
   el('btn-save').addEventListener('click', () => {
