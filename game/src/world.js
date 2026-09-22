@@ -66,6 +66,13 @@ export function createWorld(canvas) {
 
   camp.add(makeFence(c.w + 0.3, c.d + 0.3, 1.2, 5));
 
+  // 정착지는 밤에도 환하게: 캠프 전체를 덮는 따뜻한 조명 하나
+  // r155+ 의 점광원은 거리제곱으로 감쇠한다. 13m 위에서 캠프를 덮으려면
+  // 세기를 그만큼 크게 잡아야 한다(decay 1 로 완만하게).
+  const campLight = new THREE.PointLight(0xffd6a0, 0, 58, 1);
+  campLight.position.set(0, 13, 0);
+  camp.add(campLight);
+
   const gateGeo = new THREE.BoxGeometry(0.35, 1.9, 4.6);
   for (const z of [-7, 7]) {
     const gate = new THREE.Mesh(gateGeo, mat(COLORS.woodDark));
@@ -244,8 +251,9 @@ export function createWorld(canvas) {
     scene.fog.far = 95 + 45 * l;
 
     stars.material.opacity = Math.pow(1 - l, 1.5) * 0.9;
-    const torch = Math.pow(1 - l, 1.2);
-    for (const t of torchLights) t.intensity = torch * 1.5;
+    const dark = Math.pow(1 - l, 1.2);
+    for (const t of torchLights) t.intensity = dark * 7;
+    campLight.intensity = dark * 30;
   }
   setDaylight(1);
 

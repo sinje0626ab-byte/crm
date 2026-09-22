@@ -209,7 +209,7 @@ export function makeHandTorch() {
   const flame = mesh(new THREE.ConeGeometry(0.19, 0.5, 5), COLORS.ember, { emissive: 0xff8a2b });
   flame.position.y = 0.8;
   g.add(flame);
-  const light = new THREE.PointLight(0xffa64d, 0, 15, 2);
+  const light = new THREE.PointLight(0xffa64d, 0, 16, 2);
   light.position.y = 0.85;
   g.add(light);
   g.userData.flame = flame;
@@ -435,7 +435,7 @@ export function makeFurnace() {
   cap.position.y = 4.5;
   g.add(cap);
 
-  const glow = new THREE.PointLight(0xff9b3d, 2.4, 22, 2);
+  const glow = new THREE.PointLight(0xff9b3d, 10, 24, 2);
   glow.position.set(0, 1.6, 1.6);
   g.add(glow);
 
@@ -523,7 +523,7 @@ export function makeTorch(withLight = true) {
   flame.position.y = 2.65;
   g.add(flame);
   if (withLight) {
-    const light = new THREE.PointLight(0xffa64d, 1.1, 11, 2);
+    const light = new THREE.PointLight(0xffa64d, 5, 12, 2);
     light.position.y = 2.7;
     g.add(light);
     g.userData.light = light;

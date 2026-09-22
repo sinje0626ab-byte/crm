@@ -5,6 +5,7 @@ import { createWorld } from './world.js';
 import { createInput } from './input.js';
 import { createHud } from './hud.js';
 import { createMenu } from './menu.js';
+import { createMinimap } from './minimap.js';
 import { loadSave, writeSave, clearSave } from './save.js';
 import { Audio } from './audio.js';
 import {
@@ -868,7 +869,7 @@ function updateStations(dt) {
   const fire = furnace.userData.fire;
   const hot = S.cookQueue > 0;
   fire.scale.setScalar(THREE.MathUtils.lerp(fire.scale.x, hot ? 1.25 : 0.85, 0.15));
-  furnace.userData.glow.intensity = (hot ? 3.2 : 2.2) + Math.sin(S.time * 10) * 0.25;
+  furnace.userData.glow.intensity = (hot ? 16 : 10) + Math.sin(S.time * 10) * 1.2;
 
   refreshStockVisual();
 }
@@ -997,7 +998,7 @@ function updateDayNight(dt) {
   // 어두워지면 횃불을 든다
   const torchOn = f < 0.62;
   handTorch.visible = torchOn;
-  handTorch.userData.light.intensity = torchOn ? (1 - f) * 2.4 : 0;
+  handTorch.userData.light.intensity = torchOn ? (1 - f) * 9 : 0;
   if (torchOn) handTorch.userData.flame.scale.setScalar(0.85 + Math.sin(S.time * 11) * 0.15);
 
   const night = f < 0.4;
@@ -1205,10 +1206,16 @@ document.body.classList.toggle('touch', isTouch);
 input.bindButtons(document.getElementById('btn-attack'), document.getElementById('btn-skill'));
 
 const keyHints = document.getElementById('key-hints');
-const keyA = document.getElementById('key-a');
-const keyS = document.getElementById('key-s');
 const projV = new THREE.Vector3();
 let skillWasReady = true;
+
+const minimap = createMinimap(document.getElementById('minimap'));
+const MINIMAP_STATIONS = [
+  { x: FURNACE_POS.x, z: FURNACE_POS.z },
+  { x: STALL_POS.x, z: STALL_POS.z },
+  { x: CASH_POS.x, z: CASH_POS.z },
+];
+let minimapTimer = 0;
 
 function updateActionUi() {
   const px = player.position.x;
@@ -1219,18 +1226,31 @@ function updateActionUi() {
   if (ready && !skillWasReady) Audio.S.skillReady();
   skillWasReady = ready;
 
-  hud.setActions(canAttack, ready, 1 - S.skillCd / CFG.skill.cooldown);
+  hud.setActions(canAttack, ready, S.skillCd, CFG.skill.cooldown);
 
   if (!isTouch) {
     projV.set(px, 2.4, pz).project(camera);
     const x = (projV.x * 0.5 + 0.5) * innerWidth;
     const y = (-projV.y * 0.5 + 0.5) * innerHeight;
     keyHints.style.transform = `translate(${Math.round(x + 46)}px, ${Math.round(y)}px)`;
-    // 나무나 야수가 사정거리에 들어오면 캐릭터 옆에 뜬다
-    keyHints.classList.toggle('show', canAttack);
-    keyA.classList.toggle('dim', !canAttack);
-    keyS.classList.toggle('dim', !ready);
+    // 나무나 야수가 사정거리에 들어오면 캐릭터 옆에 뜬다 (쿨타임 중에도 S는 보인다)
+    keyHints.classList.toggle('show', canAttack || S.skillCd > 0);
   }
+}
+
+// 정착지 밖에서만 미니맵을 띄운다
+function updateMinimap(dt) {
+  const outside = !inCamp(player.position.x, player.position.z);
+  hud.setMinimap(outside);
+  if (!outside) return;
+  minimapTimer -= dt;
+  if (minimapTimer > 0) return;
+  minimapTimer = 0.09;
+  minimap.draw({
+    player, bears, trees, pickups, buyers,
+    stations: MINIMAP_STATIONS,
+    night: S.night,
+  });
 }
 
 /* ================================================================ 안내 */
@@ -1383,6 +1403,7 @@ function frame(now) {
       saveGame();
     }
     updateActionUi();
+    updateMinimap(dt);
     hud.setCarry(S.carry.length, carryCap());
     hud.setStock(S.stock.wood, S.stock.meat);
     hud.tick(dt);

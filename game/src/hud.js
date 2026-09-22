@@ -15,6 +15,12 @@ export function createHud() {
     btnAttack: document.getElementById('btn-attack'),
     btnSkill: document.getElementById('btn-skill'),
     skillCd: document.getElementById('skill-cd'),
+    skillSec: document.getElementById('skill-sec'),
+    keyA: document.getElementById('key-a'),
+    keyS: document.getElementById('key-s'),
+    keyCd: document.querySelector('#key-s .cd'),
+    keySec: document.querySelector('#key-s .sec'),
+    minimap: document.getElementById('minimap-wrap'),
     toast: document.getElementById('toast'),
     hint: document.getElementById('hint'),
     damage: document.getElementById('damage-flash'),
@@ -22,6 +28,15 @@ export function createHud() {
 
   let toastTimer = 0;
   let money = 0;
+  let wasCooling = false;
+
+  function flashReady() {
+    for (const el2 of [el.btnSkill, el.keyS]) {
+      el2.classList.remove('ready-flash');
+      void el2.offsetWidth;
+      el2.classList.add('ready-flash');
+    }
+  }
 
   return {
     setMoney(v) {
@@ -54,10 +69,29 @@ export function createHud() {
       el.dayIcon.classList.toggle('moon', night);
     },
     // A(공격) 가능 여부와 S(스킬) 쿨타임 표시
-    setActions(canAttack, skillReady, cdRatio) {
+    // remain = 남은 쿨타임(초), total = 전체 쿨타임(초)
+    setActions(canAttack, skillReady, remain, total) {
       el.btnAttack.classList.toggle('dim', !canAttack);
-      el.btnSkill.classList.toggle('dim', !skillReady);
-      el.skillCd.style.height = `${Math.max(0, Math.min(1, 1 - cdRatio)) * 100}%`;
+      el.keyA.classList.toggle('dim', !canAttack);
+
+      const ratio = total > 0 ? Math.max(0, Math.min(1, remain / total)) : 0;
+      const cooling = remain > 0.01;
+
+      el.btnSkill.classList.toggle('dim', cooling);
+      el.btnSkill.classList.toggle('cooling', cooling);
+      el.skillCd.style.setProperty('--cd', `${ratio * 360}deg`);
+      el.skillSec.textContent = cooling ? Math.ceil(remain) : '';
+
+      el.keyS.classList.toggle('dim', cooling);
+      el.keyS.classList.toggle('cooling', cooling);
+      el.keyCd.style.height = `${ratio * 100}%`;
+      el.keySec.textContent = cooling ? Math.ceil(remain) : '';
+
+      if (wasCooling && !cooling) flashReady();
+      wasCooling = cooling;
+    },
+    setMinimap(visible) {
+      el.minimap.classList.toggle('show', visible);
     },
     setSwordLevel(lv) {
       el.sword.textContent = `Lv.${lv + 1}`;
