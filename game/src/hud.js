@@ -7,7 +7,6 @@ export function createHud() {
     meat: document.getElementById('stock-meat'),
     carryWood: document.getElementById('carry-wood'),
     carryMeat: document.getElementById('carry-meat'),
-    carryCap: document.getElementById('carry-cap'),
     carryWrap: document.getElementById('carry-wrap'),
     hpFill: document.getElementById('hp-fill'),
     sword: document.getElementById('sword-lv'),
@@ -59,9 +58,8 @@ export function createHud() {
     },
     // 나무와 고기를 따로 표시한다
     setCarry(wood, meat, cap) {
-      el.carryWood.textContent = wood;
-      el.carryMeat.textContent = meat;
-      el.carryCap.textContent = `/${cap}`;
+      el.carryWood.textContent = `${wood}/${cap}`;
+      el.carryMeat.textContent = `${meat}/${cap}`;
       el.carryWood.classList.toggle('num-full', wood >= cap);
       el.carryMeat.classList.toggle('num-full', meat >= cap);
       el.carryWrap.classList.toggle('full', wood >= cap || meat >= cap);

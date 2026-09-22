@@ -57,8 +57,9 @@
   .dot { width: 16px; height: 11px; border-radius: 7px; background: #c2453e; }
   .dot.wood { background: linear-gradient(#a3703f, #6d4a2c); border-radius: 5px; }
   .dot.meat { background: linear-gradient(#e0655c, #a83a34); }
+  .carry-item { display: inline-flex; align-items: center; gap: 5px; }
+  .carry-item + .carry-item { margin-left: 10px; padding-left: 10px; border-left: 1px solid rgba(201,162,74,.35); }
   #carry-wrap span.num-full { color: #ffcf5a; }
-  #carry-cap { font-size: 12px; opacity: 0.65; }
   #sword-lv { display: inline-block; align-self: flex-start; padding: 3px 9px; font-size: 12px;
     font-weight: bold; background: rgba(13, 22, 32, 0.7); border-radius: 999px; }
 
@@ -469,9 +470,8 @@
         <div id="xp-bar" class="panel"><div id="xp-fill"></div></div>
       </div>
       <div id="carry-wrap" class="panel hidden">
-        <span class="dot wood"></span><span id="carry-wood">0</span>
-        <span class="dot meat"></span><span id="carry-meat">0</span>
-        <span id="carry-cap">/10</span>
+        <span class="carry-item"><span class="dot wood"></span><span id="carry-wood">0/10</span></span>
+        <span class="carry-item"><span class="dot meat"></span><span id="carry-meat">0/10</span></span>
       </div>
       <div id="sword-lv">검 Lv.1</div>
     </div>
