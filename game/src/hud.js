@@ -97,8 +97,6 @@ export function createHud() {
           if (arc) arc.style.setProperty('--cd', `${ratio * 360}deg`);
           const bar = node.querySelector('.cd');
           if (bar) bar.style.height = `${ratio * 100}%`;
-          const sec = node.querySelector('.cd-sec, .sec');
-          if (sec) sec.textContent = cooling ? Math.ceil(sk.remain) : '';
           const badge = node.querySelector('.lv-badge');
           if (badge) badge.textContent = sk.level;
         }
